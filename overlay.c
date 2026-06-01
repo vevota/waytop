@@ -95,9 +95,9 @@ static void pointer_motion(void *data, struct wl_pointer *ptr,
     int ny = wl_fixed_to_int(sy);
 
     if (ov->drag_active) {
-        int dx = nx - ov->drag_grab_x;
-        int dy = ny - ov->drag_grab_y;
-        overlay_set_position(ov, ov->pos_x + dx, ov->pos_y + dy);
+        overlay_set_position(ov,
+            ov->drag_grab_px + (nx - ov->drag_grab_rx),
+            ov->drag_grab_py + (ny - ov->drag_grab_ry));
     }
 
     ov->pointer_x = nx;
@@ -117,8 +117,10 @@ static void pointer_button(void *data, struct wl_pointer *ptr,
     if (state == WL_POINTER_BUTTON_STATE_PRESSED) {
         if (ov->pointer_y < DRAG_HANDLE_HEIGHT) {
             ov->drag_active = 1;
-            ov->drag_grab_x = ov->pointer_x;
-            ov->drag_grab_y = ov->pointer_y;
+            ov->drag_grab_rx = ov->pointer_x;
+            ov->drag_grab_ry = ov->pointer_y;
+            ov->drag_grab_px = ov->pos_x;
+            ov->drag_grab_py = ov->pos_y;
             set_input_region_handle(ov);
             wl_surface_commit(ov->surface);
             wl_display_flush(ov->display);

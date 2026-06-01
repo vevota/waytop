@@ -33,7 +33,8 @@ struct overlay {
     int pointer_entered;
     int pointer_x, pointer_y;
     int drag_active;
-    int drag_grab_x, drag_grab_y;
+    int drag_grab_rx, drag_grab_ry;
+    int drag_grab_px, drag_grab_py;
 };
 
 enum anchor_pos {
