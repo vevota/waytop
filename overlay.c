@@ -111,7 +111,7 @@ static void pointer_motion(void *data, struct wl_pointer *ptr,
         overlay_resize(ov, nw, nh);
     }
 
-    if (ov->motion_fn)
+    if (ov->motion_fn && !ov->locked)
         ov->motion_fn(ov->motion_data, nx, ny);
 
     ov->pointer_x = nx;
