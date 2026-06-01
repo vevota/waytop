@@ -9,10 +9,16 @@
 #define CLAMP(v, lo, hi) ((v) < (lo) ? (lo) : (v) > (hi) ? (hi) : (v))
 
 static void set_input_regions(struct overlay *ov) {
-    struct wl_region *region = wl_compositor_create_region(ov->compositor);
-    wl_region_add(region, 0, 0, ov->width, ov->height);
-    wl_surface_set_input_region(ov->surface, region);
-    wl_region_destroy(region);
+    if (ov->locked) {
+        struct wl_region *empty = wl_compositor_create_region(ov->compositor);
+        wl_surface_set_input_region(ov->surface, empty);
+        wl_region_destroy(empty);
+    } else {
+        struct wl_region *full = wl_compositor_create_region(ov->compositor);
+        wl_region_add(full, 0, 0, ov->width, ov->height);
+        wl_surface_set_input_region(ov->surface, full);
+        wl_region_destroy(full);
+    }
 }
 
 static void registry_global(void *data, struct wl_registry *registry,
@@ -432,6 +438,9 @@ void overlay_set_motion_fn(struct overlay *ov, void (*fn)(void *, int, int), voi
 void overlay_toggle_locked(struct overlay *ov) {
     ov->locked = !ov->locked;
     fprintf(stderr, "toggle: locked=%d\n", ov->locked);
+    set_input_regions(ov);
+    wl_surface_commit(ov->surface);
+    wl_display_flush(ov->display);
 }
 
 int overlay_is_locked(struct overlay *ov) {
