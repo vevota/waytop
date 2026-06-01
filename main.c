@@ -8,6 +8,7 @@
 #include <sys/eventfd.h>
 #include <sys/socket.h>
 #include <sys/un.h>
+#include <dirent.h>
 #include <GLES2/gl2.h>
 
 #include "overlay.h"
@@ -38,14 +39,57 @@ static void print_usage(const char *name) {
     fprintf(stderr,
         "usage: %s [options] <url|file>\n"
         "\n"
+        "  run overlay:\n"
+        "    %s -s 640x360 https://youtube.com/watch?v=...\n"
+        "\n"
+        "  control a running instance:\n"
+        "    %s -c toggle\n"
+        "    %s -c \"pos 100 50\"\n"
+        "    %s -c \"size 640x360\"\n"
+        "\n"
         "options:\n"
         "  -s WxH         size (default: 480x270)\n"
         "  -m N           margin from top-left (default: 16)\n"
-        "  -h             show this help\n"
-        "\n"
-        "example:\n"
-        "  %s -s 640x360 https://www.youtube.com/watch?v=dQw4w9WgXcQ\n",
-        name, name);
+        "  -c CMD         send command to running instance\n"
+        "  -h             show this help\n",
+        name, name, name, name, name);
+}
+
+static int ctl_send(const char *cmd) {
+    DIR *dir = opendir("/tmp");
+    if (!dir) return -1;
+
+    struct dirent *e;
+    int ret = -1;
+    while ((e = readdir(dir))) {
+        if (strncmp(e->d_name, "wl-overlay-", 11) != 0) continue;
+        if (strlen(e->d_name) + 6 > sizeof(((struct sockaddr_un *)0)->sun_path))
+            continue;
+
+        char path[256];
+        snprintf(path, sizeof(path), "/tmp/%s", e->d_name);
+
+        struct sockaddr_un addr;
+        memset(&addr, 0, sizeof(addr));
+        addr.sun_family = AF_UNIX;
+        memcpy(addr.sun_path, path, strlen(path) + 1);
+
+        int fd = socket(AF_UNIX, SOCK_STREAM, 0);
+        if (fd < 0) continue;
+
+        if (connect(fd, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
+            close(fd);
+            continue;
+        }
+
+        write(fd, cmd, strlen(cmd));
+        write(fd, "\n", 1);
+        close(fd);
+        ret = 0;
+        break;
+    }
+    closedir(dir);
+    return ret;
 }
 
 static int parse_size(const char *s, int *w, int *h) {
@@ -99,6 +143,7 @@ static int setup_cmd_socket(char *path, size_t pathlen) {
 
 static void handle_cmd(struct app *app, const char *cmd) {
     int x, y, w, h;
+    fprintf(stderr, "cmd: [%s]\n", cmd);
     if (strcmp(cmd, "quit") == 0) {
         app->running = 0;
     } else if (sscanf(cmd, "pos %d %d", &x, &y) == 2) {
@@ -108,6 +153,8 @@ static void handle_cmd(struct app *app, const char *cmd) {
         player_set_size(app->pl, w, h);
     } else if (strcmp(cmd, "toggle") == 0) {
         overlay_toggle_locked(app->ov);
+    } else {
+        fprintf(stderr, "cmd: unknown\n");
     }
 }
 
@@ -132,6 +179,7 @@ int main(int argc, char **argv) {
     int height = 270;
     int margin = 16;
     const char *url = NULL;
+    const char *ctl_cmd = NULL;
 
     int i;
     for (i = 1; i < argc; i++) {
@@ -139,7 +187,9 @@ int main(int argc, char **argv) {
             url = argv[i];
             break;
         }
-        if (strcmp(argv[i], "-s") == 0 && i + 1 < argc) {
+        if (strcmp(argv[i], "-c") == 0 && i + 1 < argc) {
+            ctl_cmd = argv[++i];
+        } else if (strcmp(argv[i], "-s") == 0 && i + 1 < argc) {
             if (parse_size(argv[++i], &width, &height) < 0) {
                 fprintf(stderr, "invalid size '%s'\n", argv[i]);
                 return 1;
@@ -154,6 +204,12 @@ int main(int argc, char **argv) {
             print_usage(argv[0]);
             return 1;
         }
+    }
+
+    if (ctl_cmd) {
+        if (ctl_send(ctl_cmd) < 0)
+            fprintf(stderr, "no running wl-overlay instance found\n");
+        return 0;
     }
 
     if (!url) {

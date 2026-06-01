@@ -9,16 +9,10 @@
 #define CLAMP(v, lo, hi) ((v) < (lo) ? (lo) : (v) > (hi) ? (hi) : (v))
 
 static void set_input_regions(struct overlay *ov) {
-    if (ov->locked) {
-        struct wl_region *empty = wl_compositor_create_region(ov->compositor);
-        wl_surface_set_input_region(ov->surface, empty);
-        wl_region_destroy(empty);
-    } else {
-        struct wl_region *region = wl_compositor_create_region(ov->compositor);
-        wl_region_add(region, 0, 0, ov->width, ov->height);
-        wl_surface_set_input_region(ov->surface, region);
-        wl_region_destroy(region);
-    }
+    struct wl_region *region = wl_compositor_create_region(ov->compositor);
+    wl_region_add(region, 0, 0, ov->width, ov->height);
+    wl_surface_set_input_region(ov->surface, region);
+    wl_region_destroy(region);
 }
 
 static void registry_global(void *data, struct wl_registry *registry,
@@ -82,6 +76,7 @@ static void pointer_enter(void *data, struct wl_pointer *ptr,
     ov->pointer_entered = 1;
     ov->pointer_x = wl_fixed_to_int(sx);
     ov->pointer_y = wl_fixed_to_int(sy);
+    fprintf(stderr, "pointer: enter %d %d\n", ov->pointer_x, ov->pointer_y);
 }
 
 static void pointer_leave(void *data, struct wl_pointer *ptr,
@@ -93,6 +88,7 @@ static void pointer_leave(void *data, struct wl_pointer *ptr,
     ov->pointer_entered = 0;
     ov->drag_active = 0;
     ov->resize_active = 0;
+    fprintf(stderr, "pointer: leave\n");
 }
 
 static void pointer_motion(void *data, struct wl_pointer *ptr,
@@ -129,6 +125,10 @@ static void pointer_button(void *data, struct wl_pointer *ptr,
 
     if (button != BTN_LEFT) return;
 
+    fprintf(stderr, "pointer: btn %s locked=%d\n",
+            state == WL_POINTER_BUTTON_STATE_PRESSED ? "press" : "release",
+            ov->locked);
+
     if (state == WL_POINTER_BUTTON_STATE_PRESSED && !ov->locked) {
         int in_grip = ov->pointer_x >= ov->width - RESIZE_GRIP_SIZE &&
                       ov->pointer_y >= ov->height - RESIZE_GRIP_SIZE;
@@ -139,12 +139,14 @@ static void pointer_button(void *data, struct wl_pointer *ptr,
             ov->resize_grab_ry = ov->pointer_y;
             ov->resize_grab_bw = ov->width;
             ov->resize_grab_bh = ov->height;
+            fprintf(stderr, "pointer: resize start\n");
         } else {
             ov->drag_active = 1;
             ov->drag_grab_rx = ov->pointer_x;
             ov->drag_grab_ry = ov->pointer_y;
             ov->drag_grab_px = ov->pos_x;
             ov->drag_grab_py = ov->pos_y;
+            fprintf(stderr, "pointer: drag start at pos %d,%d\n", ov->pos_x, ov->pos_y);
         }
     } else {
         if (ov->drag_active) {
@@ -201,6 +203,7 @@ struct overlay *overlay_create(const char *socket, int width, int height,
                                enum anchor_pos pos, int margin) {
     (void)pos;
     struct overlay *ov = calloc(1, sizeof(*ov));
+    ov->locked = 1;
     ov->width = width;
     ov->height = height;
 
@@ -420,9 +423,7 @@ void overlay_set_resize_fn(struct overlay *ov, void (*fn)(void *, int, int), voi
 
 void overlay_toggle_locked(struct overlay *ov) {
     ov->locked = !ov->locked;
-    set_input_regions(ov);
-    wl_surface_commit(ov->surface);
-    wl_display_flush(ov->display);
+    fprintf(stderr, "toggle: locked=%d\n", ov->locked);
 }
 
 int overlay_is_locked(struct overlay *ov) {

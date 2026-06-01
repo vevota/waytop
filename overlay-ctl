@@ -1,55 +1,27 @@
 #!/usr/bin/env bash
 
-pid=$(pidof wl-overlay)
-if [ -z "$pid" ]; then
-    echo "wl-overlay is not running" >&2
+wl_overlay=$(dirname "$0")/wl-overlay
+if [ ! -x "$wl_overlay" ]; then
+    echo "wl-overlay not found at $wl_overlay" >&2
     exit 1
 fi
-
-socket="/tmp/wl-overlay-$pid.sock"
-if [ ! -S "$socket" ]; then
-    echo "socket $socket not found" >&2
-    exit 1
-fi
-
-send() {
-    echo "$@" | socat - UNIX-CONNECT:"$socket"
-}
-
-send_pos() {
-    send "pos $1 $2"
-}
 
 case "${1:-}" in
     pos)
-        if [ -n "$2" ] && [ -n "$3" ]; then
-            send_pos "$2" "$3"
-            exit $?
-        fi
+        [ -n "$2" ] && [ -n "$3" ] && exec "$wl_overlay" -c "pos $2 $3"
         ;;
     size)
-        if [ -n "$2" ]; then
-            send "size $2"
-            exit $?
-        fi
+        [ -n "$2" ] && exec "$wl_overlay" -c "size $2"
         ;;
-    toggle)
-        send "toggle"
-        exit $?
-        ;;
-    quit)
-        send "quit"
-        exit $?
+    toggle|quit)
+        exec "$wl_overlay" -c "$1"
         ;;
 esac
 
 if [ -z "${1:-}" ]; then
     if command -v slurp >/dev/null 2>&1; then
         coords=$(slurp -f "%x %y" 2>/dev/null)
-        if [ -n "$coords" ]; then
-            send_pos ${coords% *} ${coords#* }
-            exit $?
-        fi
+        [ -n "$coords" ] && exec "$wl_overlay" -c "pos ${coords% *} ${coords#* }"
     fi
 fi
 
