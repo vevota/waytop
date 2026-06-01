@@ -107,6 +107,7 @@ static void on_pointer(void *data, int x, int y, int type) {
     char xs[16], ys[16];
     snprintf(xs, sizeof(xs), "%d", x);
     snprintf(ys, sizeof(ys), "%d", y);
+    fprintf(stderr, "mpv: mouse %d %d type=%d\n", x, y, type);
 
     if (type == 0) {
         const char *args[] = {"mouse", xs, ys, NULL};
