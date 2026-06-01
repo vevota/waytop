@@ -16,6 +16,7 @@ struct player {
 struct player *player_create(const char *url, int width, int height);
 void player_set_wakeup_fd(struct player *pl, int *fd);
 void player_destroy(struct player *pl);
+void player_set_size(struct player *pl, int width, int height);
 void player_render(struct player *pl);
 int player_update(struct player *pl);
 int player_poll_event(struct player *pl, mpv_event **ev);

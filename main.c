@@ -54,6 +54,16 @@ static int parse_size(const char *s, int *w, int *h) {
     return 0;
 }
 
+static void on_scroll(void *data, int value) {
+    struct player *pl = data;
+    double vol;
+    mpv_get_property(pl->mpv, "volume", MPV_FORMAT_DOUBLE, &vol);
+    vol += value > 0 ? -5.0 : 5.0;
+    if (vol < 0.0) vol = 0.0;
+    if (vol > 150.0) vol = 150.0;
+    mpv_set_property(pl->mpv, "volume", MPV_FORMAT_DOUBLE, &vol);
+}
+
 static int setup_cmd_socket(char *path, size_t pathlen) {
     int n = snprintf(path, pathlen, "/tmp/wl-overlay-%d.sock", getpid());
     if (n < 0 || (size_t)n >= pathlen) return -1;
@@ -84,12 +94,14 @@ static int setup_cmd_socket(char *path, size_t pathlen) {
 }
 
 static void handle_cmd(struct app *app, const char *cmd) {
-    int x, y;
+    int x, y, w, h;
     if (strcmp(cmd, "quit") == 0) {
         app->running = 0;
     } else if (sscanf(cmd, "pos %d %d", &x, &y) == 2) {
-        fprintf(stderr, "move to %d %d\n", x, y);
         overlay_set_position(app->ov, x, y);
+    } else if (sscanf(cmd, "size %dx%d", &w, &h) == 2 && w > 0 && h > 0) {
+        overlay_resize(app->ov, w, h);
+        player_set_size(app->pl, w, h);
     }
 }
 
@@ -180,6 +192,7 @@ int main(int argc, char **argv) {
     }
 
     player_set_wakeup_fd(app.pl, &app.wakeup_fd);
+    overlay_set_scroll_fn(app.ov, on_scroll, app.pl);
     app.running = 1;
 
     overlay_make_current(app.ov);

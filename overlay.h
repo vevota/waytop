@@ -35,6 +35,9 @@ struct overlay {
     int drag_active;
     int drag_grab_rx, drag_grab_ry;
     int drag_grab_px, drag_grab_py;
+
+    void (*scroll_fn)(void *, int);
+    void *scroll_data;
 };
 
 enum anchor_pos {
@@ -52,6 +55,8 @@ int overlay_closed(struct overlay *ov);
 void overlay_make_current(struct overlay *ov);
 void overlay_swap_buffers(struct overlay *ov);
 void overlay_set_position(struct overlay *ov, int x, int y);
+void overlay_resize(struct overlay *ov, int width, int height);
+void overlay_set_scroll_fn(struct overlay *ov, void (*fn)(void *, int), void *data);
 EGLDisplay overlay_get_egl_display(struct overlay *ov);
 
 #endif

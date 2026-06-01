@@ -73,6 +73,11 @@ void player_set_wakeup_fd(struct player *pl, int *fd) {
     mpv_set_wakeup_callback(pl->mpv, wakeup_cb, fd);
 }
 
+void player_set_size(struct player *pl, int width, int height) {
+    pl->width = width;
+    pl->height = height;
+}
+
 void player_destroy(struct player *pl) {
     if (!pl) return;
     if (pl->render_ctx)

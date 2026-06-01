@@ -12,31 +12,49 @@ if [ ! -S "$socket" ]; then
     exit 1
 fi
 
-send_pos() {
-    echo "pos $1 $2" | socat - UNIX-CONNECT:"$socket"
+send() {
+    echo "$@" | socat - UNIX-CONNECT:"$socket"
 }
 
-if [ "$1" = "pos" ] && [ -n "$2" ] && [ -n "$3" ]; then
-    send_pos "$2" "$3"
-    exit $?
-fi
+send_pos() {
+    send "pos $1 $2"
+}
 
-if command -v slurp >/dev/null 2>&1; then
-    coords=$(slurp -f "%x %y" 2>/dev/null)
-    if [ -n "$coords" ]; then
-        send_pos ${coords% *} ${coords#* }
+case "${1:-}" in
+    pos)
+        if [ -n "$2" ] && [ -n "$3" ]; then
+            send_pos "$2" "$3"
+            exit $?
+        fi
+        ;;
+    size)
+        if [ -n "$2" ]; then
+            send "size $2"
+            exit $?
+        fi
+        ;;
+    quit)
+        send "quit"
         exit $?
+        ;;
+esac
+
+if [ -z "${1:-}" ]; then
+    if command -v slurp >/dev/null 2>&1; then
+        coords=$(slurp -f "%x %y" 2>/dev/null)
+        if [ -n "$coords" ]; then
+            send_pos ${coords% *} ${coords#* }
+            exit $?
+        fi
     fi
 fi
 
-if command -v zenity >/dev/null 2>&1; then
-    coords=$(zenity --forms --title="wl-overlay" --text="Position" \
-        --add-entry="X" --add-entry="Y" 2>/dev/null)
-    if [ -n "$coords" ]; then
-        send_pos ${coords%|*} ${coords#*|}
-        exit $?
-    fi
-fi
-
-echo "install slurp or zenity to pick a position" >&2
+exec >&2
+echo "usage: $0 [command] [args]"
+echo ""
+echo "commands:"
+echo "  (no args)       click to position via slurp"
+echo "  pos <x> <y>     move to absolute position"
+echo "  size <WxH>      resize (e.g. 640x360)"
+echo "  quit            exit wl-overlay"
 exit 1

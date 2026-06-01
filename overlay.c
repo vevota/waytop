@@ -135,11 +135,12 @@ static void pointer_button(void *data, struct wl_pointer *ptr,
 
 static void pointer_axis(void *data, struct wl_pointer *ptr,
                          uint32_t time, uint32_t axis, wl_fixed_t value) {
-    (void)data;
     (void)ptr;
     (void)time;
-    (void)axis;
-    (void)value;
+    struct overlay *ov = data;
+    if (axis == WL_POINTER_AXIS_VERTICAL_SCROLL && ov->scroll_fn) {
+        ov->scroll_fn(ov->scroll_data, wl_fixed_to_int(value));
+    }
 }
 
 static const struct wl_pointer_listener pointer_listener = {
@@ -369,4 +370,20 @@ void overlay_set_position(struct overlay *ov, int x, int y) {
 
 EGLDisplay overlay_get_egl_display(struct overlay *ov) {
     return ov->egl_display;
+}
+
+void overlay_resize(struct overlay *ov, int width, int height) {
+    ov->width = width;
+    ov->height = height;
+    if (ov->egl_window)
+        wl_egl_window_resize(ov->egl_window, width, height, 0, 0);
+    zwlr_layer_surface_v1_set_size(ov->layer_surface, width, height);
+    set_input_region_handle(ov);
+    wl_surface_commit(ov->surface);
+    wl_display_flush(ov->display);
+}
+
+void overlay_set_scroll_fn(struct overlay *ov, void (*fn)(void *, int), void *data) {
+    ov->scroll_fn = fn;
+    ov->scroll_data = data;
 }
