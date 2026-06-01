@@ -4,7 +4,10 @@
 #include <unistd.h>
 #include <stdint.h>
 #include <poll.h>
+#include <fcntl.h>
 #include <sys/eventfd.h>
+#include <sys/socket.h>
+#include <sys/un.h>
 #include <GLES2/gl2.h>
 
 #include "overlay.h"
@@ -14,8 +17,10 @@ struct app {
     struct overlay *ov;
     struct player *pl;
     int wakeup_fd;
+    int cmd_fd;
     int frame_done;
     int running;
+    char socket_path[128];
 };
 
 static void frame_done_cb(void *data, struct wl_callback *cb, uint32_t time) {
@@ -57,6 +62,60 @@ static enum anchor_pos parse_pos(const char *s) {
     if (strcmp(s, "tl") == 0) return ANCHOR_TOP_LEFT;
     fprintf(stderr, "invalid position '%s', using bottom-right\n", s);
     return ANCHOR_BOTTOM_RIGHT;
+}
+
+static int setup_cmd_socket(char *path, size_t pathlen) {
+    int n = snprintf(path, pathlen, "/tmp/wl-overlay-%d.sock", getpid());
+    if (n < 0 || (size_t)n >= pathlen) return -1;
+
+    unlink(path);
+
+    if (strlen(path) >= sizeof(((struct sockaddr_un *)0)->sun_path))
+        return -1;
+
+    struct sockaddr_un addr;
+    memset(&addr, 0, sizeof(addr));
+    addr.sun_family = AF_UNIX;
+    memcpy(addr.sun_path, path, strlen(path) + 1);
+
+    int fd = socket(AF_UNIX, SOCK_STREAM, 0);
+    if (fd < 0) return -1;
+
+    if (bind(fd, (struct sockaddr *)&addr, sizeof(addr)) < 0 ||
+        listen(fd, 4) < 0) {
+        close(fd);
+        return -1;
+    }
+
+    int flags = fcntl(fd, F_GETFL, 0);
+    fcntl(fd, F_SETFL, flags | O_NONBLOCK);
+
+    return fd;
+}
+
+static void handle_cmd(struct app *app, const char *cmd) {
+    int x, y;
+    if (strcmp(cmd, "quit") == 0) {
+        app->running = 0;
+    } else if (sscanf(cmd, "pos %d %d", &x, &y) == 2) {
+        overlay_set_position(app->ov, x, y);
+    }
+}
+
+static void process_cmd_client(struct app *app, int client) {
+    int flags = fcntl(client, F_GETFL, 0);
+    fcntl(client, F_SETFL, flags | O_NONBLOCK);
+
+    char buf[256];
+    int n = read(client, buf, sizeof(buf) - 1);
+    close(client);
+
+    if (n > 0) {
+        buf[n] = '\0';
+        char *nl = strchr(buf, '\n');
+        if (nl) *nl = '\0';
+        handle_cmd(app, buf);
+    }
 }
 
 int main(int argc, char **argv) {
@@ -112,9 +171,21 @@ int main(int argc, char **argv) {
         return 1;
     }
 
+    app.cmd_fd = setup_cmd_socket(app.socket_path, sizeof(app.socket_path));
+    if (app.cmd_fd < 0) {
+        fprintf(stderr, "failed to create command socket\n");
+        close(app.wakeup_fd);
+        overlay_destroy(app.ov);
+        return 1;
+    }
+
+    fprintf(stderr, "socket: %s\n", app.socket_path);
+
     app.pl = player_create(url, width, height);
     if (!app.pl) {
         fprintf(stderr, "failed to create player\n");
+        close(app.cmd_fd);
+        unlink(app.socket_path);
         close(app.wakeup_fd);
         overlay_destroy(app.ov);
         return 1;
@@ -154,14 +225,16 @@ int main(int argc, char **argv) {
 
         wl_display_flush(app.ov->display);
 
-        struct pollfd fds[2];
+        struct pollfd fds[3];
         memset(fds, 0, sizeof(fds));
         fds[0].fd = wl_display_get_fd(app.ov->display);
         fds[0].events = POLLIN;
         fds[1].fd = app.wakeup_fd;
         fds[1].events = POLLIN;
+        fds[2].fd = app.cmd_fd;
+        fds[2].events = POLLIN;
 
-        poll(fds, 2, -1);
+        poll(fds, 3, -1);
 
         if (fds[0].revents & POLLIN)
             wl_display_dispatch(app.ov->display);
@@ -171,11 +244,22 @@ int main(int argc, char **argv) {
             read(app.wakeup_fd, &val, sizeof(val));
         }
 
+        if (fds[2].revents & POLLIN) {
+            int client = accept(app.cmd_fd, NULL, NULL);
+            if (client >= 0) {
+                int flags = fcntl(client, F_GETFL, 0);
+                fcntl(client, F_SETFL, flags | O_NONBLOCK);
+                process_cmd_client(&app, client);
+            }
+        }
+
         if (app.ov->closed)
             app.running = 0;
     }
 
     player_destroy(app.pl);
+    close(app.cmd_fd);
+    unlink(app.socket_path);
     close(app.wakeup_fd);
     overlay_destroy(app.ov);
 

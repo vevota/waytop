@@ -39,6 +39,7 @@ int overlay_configured(struct overlay *ov);
 int overlay_closed(struct overlay *ov);
 void overlay_make_current(struct overlay *ov);
 void overlay_swap_buffers(struct overlay *ov);
+void overlay_set_position(struct overlay *ov, int x, int y);
 EGLDisplay overlay_get_egl_display(struct overlay *ov);
 
 #endif
