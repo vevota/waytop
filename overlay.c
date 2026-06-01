@@ -117,10 +117,12 @@ static void pointer_motion(void *data, struct wl_pointer *ptr,
         int nw = CLAMP(ov->resize_grab_bw + dw, MIN_WIDTH, 9999);
         int nh = CLAMP(ov->resize_grab_bh + dh, MIN_HEIGHT, 9999);
         overlay_resize(ov, nw, nh);
-    } else if (!ov->locked && (ov->drag_grab_rx || ov->drag_grab_ry)) {
-        if (abs(nx - ov->press_x) > DRAG_THRESHOLD ||
-            abs(ny - ov->press_y) > DRAG_THRESHOLD) {
+    } else if (ov->press_pending) {
+        int dx = nx - ov->press_x;
+        int dy = ny - ov->press_y;
+        if (dx * dx + dy * dy > DRAG_THRESHOLD * DRAG_THRESHOLD) {
             ov->drag_active = 1;
+            ov->press_pending = 0;
             ov->drag_grab_rx = ov->press_x;
             ov->drag_grab_ry = ov->press_y;
             ov->drag_grab_px = ov->pos_x;
@@ -150,8 +152,8 @@ static void pointer_button(void *data, struct wl_pointer *ptr,
             state == WL_POINTER_BUTTON_STATE_PRESSED ? "press" : "release",
             ov->locked);
 
-    if (!ov->locked) {
-        if (state == WL_POINTER_BUTTON_STATE_PRESSED) {
+    if (state == WL_POINTER_BUTTON_STATE_PRESSED) {
+        if (!ov->locked) {
             int in_grip = ov->pointer_x >= ov->width - RESIZE_GRIP_SIZE &&
                           ov->pointer_y >= ov->height - RESIZE_GRIP_SIZE;
 
@@ -163,29 +165,23 @@ static void pointer_button(void *data, struct wl_pointer *ptr,
                 ov->resize_grab_bh = ov->height;
                 fprintf(stderr, "pointer: resize start\n");
             } else {
+                ov->press_pending = 1;
                 ov->press_x = ov->pointer_x;
                 ov->press_y = ov->pointer_y;
-                ov->drag_grab_rx = 0;
-                ov->drag_grab_ry = 0;
                 fprintf(stderr, "pointer: press at %d,%d\n", ov->press_x, ov->press_y);
             }
 
             if (ov->pointer_fn)
                 ov->pointer_fn(ov->pointer_data, ov->pointer_x, ov->pointer_y, 1);
-        } else {
-            if (ov->drag_active) {
-                ov->drag_active = 0;
-                ov->drag_grab_rx = 0;
-                ov->drag_grab_ry = 0;
-            }
-            if (ov->resize_active) {
-                ov->resize_active = 0;
-            } else if (!ov->drag_active) {
-                if (ov->pointer_fn)
-                    ov->pointer_fn(ov->pointer_data, ov->pointer_x, ov->pointer_y, -1);
-            }
-            ov->drag_grab_rx = 0;
-            ov->drag_grab_ry = 0;
+        }
+    } else {
+        ov->press_pending = 0;
+        if (ov->drag_active) {
+            ov->drag_active = 0;
+        } else if (ov->resize_active) {
+            ov->resize_active = 0;
+        } else if (!ov->locked && ov->pointer_fn) {
+            ov->pointer_fn(ov->pointer_data, ov->pointer_x, ov->pointer_y, -1);
         }
     }
 }

@@ -36,6 +36,7 @@ struct overlay {
     int pointer_entered;
     int pointer_x, pointer_y;
 
+    int press_pending;
     int press_x, press_y;
     int drag_active;
     int drag_grab_rx, drag_grab_ry;
