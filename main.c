@@ -143,16 +143,25 @@ static int setup_cmd_socket(char *path, size_t pathlen) {
 
 static void handle_cmd(struct app *app, const char *cmd) {
     int x, y, w, h;
+    float fs;
     fprintf(stderr, "cmd: [%s]\n", cmd);
     if (strcmp(cmd, "quit") == 0) {
         app->running = 0;
+    } else if (strcmp(cmd, "toggle") == 0) {
+        overlay_toggle_locked(app->ov);
     } else if (sscanf(cmd, "pos %d %d", &x, &y) == 2) {
         overlay_set_position(app->ov, x, y);
     } else if (sscanf(cmd, "size %dx%d", &w, &h) == 2 && w > 0 && h > 0) {
         overlay_resize(app->ov, w, h);
         player_set_size(app->pl, w, h);
-    } else if (strcmp(cmd, "toggle") == 0) {
-        overlay_toggle_locked(app->ov);
+    } else if (sscanf(cmd, "seek %f", &fs) == 1) {
+        char buf[32];
+        snprintf(buf, sizeof(buf), "%+.0f", fs);
+        const char *args[] = {"seek", buf, "relative", NULL};
+        player_cmd(app->pl, args);
+    } else if (strcmp(cmd, "play") == 0 || strcmp(cmd, "pause") == 0) {
+        const char *args[] = {"cycle", "pause", NULL};
+        player_cmd(app->pl, args);
     } else {
         fprintf(stderr, "cmd: unknown\n");
     }

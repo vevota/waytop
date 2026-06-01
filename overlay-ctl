@@ -13,6 +13,12 @@ case "${1:-}" in
     size)
         [ -n "$2" ] && exec "$wl_overlay" -c "size $2"
         ;;
+    seek)
+        [ -n "$2" ] && exec "$wl_overlay" -c "seek $2"
+        ;;
+    play|pause)
+        exec "$wl_overlay" -c "$1"
+        ;;
     toggle|quit)
         exec "$wl_overlay" -c "$1"
         ;;
@@ -32,6 +38,8 @@ echo "commands:"
 echo "  (no args)       click to position via slurp"
 echo "  pos <x> <y>     move to absolute position"
 echo "  size <WxH>      resize (e.g. 640x360)"
+echo "  seek <secs>     seek forward/back (e.g. 30, -10)"
+echo "  play|pause      toggle play/pause"
 echo "  toggle          switch between locked (click-through) and unlocked"
-echo "  quit            exit wl-overlay"
+echo "  quit            exit waytop"
 exit 1

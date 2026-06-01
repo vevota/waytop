@@ -20,5 +20,6 @@ void player_set_size(struct player *pl, int width, int height);
 void player_render(struct player *pl);
 int player_update(struct player *pl);
 int player_poll_event(struct player *pl, mpv_event **ev);
+void player_cmd(struct player *pl, const char *args[]);
 
 #endif

@@ -34,9 +34,8 @@ struct player *player_create(const char *url, int width, int height) {
     mpv_set_option_string(pl->mpv, "hwdec", "auto");
     mpv_set_option_string(pl->mpv, "keep-open", "yes");
     mpv_set_option_string(pl->mpv, "audio-display", "no");
-    mpv_set_option_string(pl->mpv, "osc", "no");
-    mpv_set_option_string(pl->mpv, "load-scripts", "no");
-    mpv_set_option_string(pl->mpv, "input-default-bindings", "no");
+    mpv_set_option_string(pl->mpv, "osc", "yes");
+    mpv_set_option_string(pl->mpv, "load-scripts", "yes");
     mpv_set_option_string(pl->mpv, "terminal", "no");
 
     if (mpv_initialize(pl->mpv) < 0) {
@@ -112,4 +111,8 @@ int player_update(struct player *pl) {
 int player_poll_event(struct player *pl, mpv_event **ev) {
     *ev = mpv_wait_event(pl->mpv, 0);
     return (*ev)->event_id != MPV_EVENT_NONE;
+}
+
+void player_cmd(struct player *pl, const char *args[]) {
+    mpv_command_async(pl->mpv, 0, args);
 }
