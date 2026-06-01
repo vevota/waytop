@@ -54,6 +54,10 @@ static int parse_size(const char *s, int *w, int *h) {
     return 0;
 }
 
+static void on_resize(void *data, int w, int h) {
+    player_set_size((struct player *)data, w, h);
+}
+
 static void on_scroll(void *data, int value) {
     struct player *pl = data;
     double vol;
@@ -193,6 +197,7 @@ int main(int argc, char **argv) {
 
     player_set_wakeup_fd(app.pl, &app.wakeup_fd);
     overlay_set_scroll_fn(app.ov, on_scroll, app.pl);
+    overlay_set_resize_fn(app.ov, on_resize, app.pl);
     app.running = 1;
 
     overlay_make_current(app.ov);

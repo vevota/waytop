@@ -403,9 +403,16 @@ void overlay_resize(struct overlay *ov, int width, int height) {
     set_input_regions(ov);
     wl_surface_commit(ov->surface);
     wl_display_flush(ov->display);
+    if (ov->resize_fn)
+        ov->resize_fn(ov->resize_data, width, height);
 }
 
 void overlay_set_scroll_fn(struct overlay *ov, void (*fn)(void *, int), void *data) {
     ov->scroll_fn = fn;
     ov->scroll_data = data;
+}
+
+void overlay_set_resize_fn(struct overlay *ov, void (*fn)(void *, int, int), void *data) {
+    ov->resize_fn = fn;
+    ov->resize_data = data;
 }

@@ -6,8 +6,8 @@
 #include <wayland-client.h>
 #include <wayland-egl.h>
 
-#define DRAG_HANDLE_HEIGHT 20
-#define RESIZE_GRIP_SIZE 20
+#define DRAG_HANDLE_HEIGHT 30
+#define RESIZE_GRIP_SIZE 30
 #define MIN_WIDTH 100
 #define MIN_HEIGHT 56
 
@@ -46,6 +46,9 @@ struct overlay {
 
     void (*scroll_fn)(void *, int);
     void *scroll_data;
+
+    void (*resize_fn)(void *, int, int);
+    void *resize_data;
 };
 
 enum anchor_pos {
@@ -65,6 +68,7 @@ void overlay_swap_buffers(struct overlay *ov);
 void overlay_set_position(struct overlay *ov, int x, int y);
 void overlay_resize(struct overlay *ov, int width, int height);
 void overlay_set_scroll_fn(struct overlay *ov, void (*fn)(void *, int), void *data);
+void overlay_set_resize_fn(struct overlay *ov, void (*fn)(void *, int, int), void *data);
 EGLDisplay overlay_get_egl_display(struct overlay *ov);
 
 #endif
