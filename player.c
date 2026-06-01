@@ -32,7 +32,7 @@ struct player *player_create(const char *url, int width, int height) {
 
     mpv_set_option_string(pl->mpv, "vo", "libmpv");
     mpv_set_option_string(pl->mpv, "hwdec", "auto");
-    mpv_set_option_string(pl->mpv, "keep-open", "no");
+    mpv_set_option_string(pl->mpv, "keep-open", "yes");
     mpv_set_option_string(pl->mpv, "audio-display", "no");
     mpv_set_option_string(pl->mpv, "osc", "no");
     mpv_set_option_string(pl->mpv, "load-scripts", "no");

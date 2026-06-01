@@ -269,10 +269,8 @@ int main(int argc, char **argv) {
     while (app.running) {
         mpv_event *ev;
         while (player_poll_event(app.pl, &ev)) {
-            if (ev->event_id == MPV_EVENT_SHUTDOWN ||
-                ev->event_id == MPV_EVENT_END_FILE) {
+            if (ev->event_id == MPV_EVENT_SHUTDOWN)
                 app.running = 0;
-            }
         }
 
         int mpv_ready = player_update(app.pl);
