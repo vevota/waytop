@@ -62,7 +62,7 @@ static int ctl_send(const char *cmd) {
     struct dirent *e;
     int ret = -1;
     while ((e = readdir(dir))) {
-        if (strncmp(e->d_name, "wl-overlay-", 11) != 0) continue;
+        if (strncmp(e->d_name, "waytop-", 7) != 0) continue;
         if (strlen(e->d_name) + 6 > sizeof(((struct sockaddr_un *)0)->sun_path))
             continue;
 
@@ -113,7 +113,7 @@ static void on_scroll(void *data, int value) {
 }
 
 static int setup_cmd_socket(char *path, size_t pathlen) {
-    int n = snprintf(path, pathlen, "/tmp/wl-overlay-%d.sock", getpid());
+    int n = snprintf(path, pathlen, "/tmp/waytop-%d.sock", getpid());
     if (n < 0 || (size_t)n >= pathlen) return -1;
 
     unlink(path);

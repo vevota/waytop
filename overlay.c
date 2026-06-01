@@ -231,7 +231,7 @@ struct overlay *overlay_create(const char *socket, int width, int height,
 
     ov->layer_surface = zwlr_layer_shell_v1_get_layer_surface(
         ov->layer_shell, ov->surface, NULL,
-        ZWLR_LAYER_SHELL_V1_LAYER_OVERLAY, "wl-overlay");
+        ZWLR_LAYER_SHELL_V1_LAYER_OVERLAY, "waytop");
 
     zwlr_layer_surface_v1_add_listener(ov->layer_surface,
                                        &layer_surface_listener, ov);

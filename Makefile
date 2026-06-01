@@ -5,7 +5,7 @@ LDLIBS += -lrt
 
 WL_PROTOCOLS = protocols/layer-shell-protocol.o protocols/xdg-shell-protocol.o
 
-wl-overlay: main.o overlay.o player.o $(WL_PROTOCOLS)
+waytop: main.o overlay.o player.o $(WL_PROTOCOLS)
 	$(CC) $(CFLAGS) -o $@ $^ $(LDLIBS)
 
 main.o: main.c overlay.h player.h
@@ -31,7 +31,7 @@ protocols/xdg-shell-protocol.o: protocols/xdg-shell-protocol.c \
                                 protocols/xdg-shell-client-protocol.h
 
 clean:
-	rm -f *.o protocols/*.o wl-overlay
+	rm -f *.o protocols/*.o waytop
 
 distclean: clean
 	rm -f protocols/layer-shell-protocol.c \

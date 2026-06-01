@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
-wl_overlay=$(dirname "$0")/wl-overlay
+wl_overlay=$(dirname "$0")/waytop
 if [ ! -x "$wl_overlay" ]; then
-    echo "wl-overlay not found at $wl_overlay" >&2
+    echo "waytop not found at $wl_overlay" >&2
     exit 1
 fi
 
