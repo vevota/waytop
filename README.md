@@ -27,18 +27,6 @@ Think of it as an OnTopReplica alternative for Linux.
 sudo pacman -S wayland wayland-egl egl-wayland libglvnd mpv
 ```
 
-### Debian/Ubuntu
-
-```bash
-sudo apt install libwayland-dev libwayland-egl1 libegl1-mesa-dev libgles2-mesa-dev libmpv-dev
-```
-
-### Fedora
-
-```bash
-sudo dnf install wayland-devel wayland-egl-devel mesa-libEGL-devel mesa-libGLES-devel mpv-libs-devel
-```
-
 ## Build
 
 ```bash
@@ -120,12 +108,4 @@ Video rendering uses mpv's OpenGL render API with hardware decoding (auto-detect
 | Bottom-right 40×40 grip | Click + drag to resize |
 | Scroll wheel | Volume up/down (±5 per notch) |
 
-## Why not just use browser PiP?
 
-Browser picture-in-picture works great for web video, but:
-- It doesn't stay above fullscreen games on Wayland
-- Clicks pass to the game only if the PiP window isn't in the way
-- No resize grip, no keyboard control, no scroll-to-volume
-- Can't play local files or Jellyfin streams
-
-Waytop solves all of these by using the `overlay` layer-shell layer and an empty input region.
