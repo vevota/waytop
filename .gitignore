@@ -1,4 +1,5 @@
 *.o
 /protocols/*-protocol.c
 /protocols/*-client-protocol.h
+/wl-overlay
 /waytop
