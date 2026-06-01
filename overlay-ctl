@@ -33,6 +33,10 @@ case "${1:-}" in
             exit $?
         fi
         ;;
+    toggle)
+        send "toggle"
+        exit $?
+        ;;
     quit)
         send "quit"
         exit $?
@@ -56,5 +60,6 @@ echo "commands:"
 echo "  (no args)       click to position via slurp"
 echo "  pos <x> <y>     move to absolute position"
 echo "  size <WxH>      resize (e.g. 640x360)"
+echo "  toggle          switch between locked (click-through) and unlocked"
 echo "  quit            exit wl-overlay"
 exit 1

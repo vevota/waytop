@@ -106,6 +106,8 @@ static void handle_cmd(struct app *app, const char *cmd) {
     } else if (sscanf(cmd, "size %dx%d", &w, &h) == 2 && w > 0 && h > 0) {
         overlay_resize(app->ov, w, h);
         player_set_size(app->pl, w, h);
+    } else if (strcmp(cmd, "toggle") == 0) {
+        overlay_toggle_locked(app->ov);
     }
 }
 

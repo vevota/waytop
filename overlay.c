@@ -9,14 +9,16 @@
 #define CLAMP(v, lo, hi) ((v) < (lo) ? (lo) : (v) > (hi) ? (hi) : (v))
 
 static void set_input_regions(struct overlay *ov) {
-    struct wl_region *region = wl_compositor_create_region(ov->compositor);
-    wl_region_add(region, 0, 0, ov->width, DRAG_HANDLE_HEIGHT);
-    if (ov->width >= RESIZE_GRIP_SIZE && ov->height >= RESIZE_GRIP_SIZE)
-        wl_region_add(region, ov->width - RESIZE_GRIP_SIZE,
-                      ov->height - RESIZE_GRIP_SIZE,
-                      RESIZE_GRIP_SIZE, RESIZE_GRIP_SIZE);
-    wl_surface_set_input_region(ov->surface, region);
-    wl_region_destroy(region);
+    if (ov->locked) {
+        struct wl_region *empty = wl_compositor_create_region(ov->compositor);
+        wl_surface_set_input_region(ov->surface, empty);
+        wl_region_destroy(empty);
+    } else {
+        struct wl_region *region = wl_compositor_create_region(ov->compositor);
+        wl_region_add(region, 0, 0, ov->width, ov->height);
+        wl_surface_set_input_region(ov->surface, region);
+        wl_region_destroy(region);
+    }
 }
 
 static void registry_global(void *data, struct wl_registry *registry,
@@ -127,23 +129,22 @@ static void pointer_button(void *data, struct wl_pointer *ptr,
 
     if (button != BTN_LEFT) return;
 
-    if (state == WL_POINTER_BUTTON_STATE_PRESSED) {
+    if (state == WL_POINTER_BUTTON_STATE_PRESSED && !ov->locked) {
         int in_grip = ov->pointer_x >= ov->width - RESIZE_GRIP_SIZE &&
                       ov->pointer_y >= ov->height - RESIZE_GRIP_SIZE;
-        int in_handle = ov->pointer_y < DRAG_HANDLE_HEIGHT;
 
-        if (in_handle) {
-            ov->drag_active = 1;
-            ov->drag_grab_rx = ov->pointer_x;
-            ov->drag_grab_ry = ov->pointer_y;
-            ov->drag_grab_px = ov->pos_x;
-            ov->drag_grab_py = ov->pos_y;
-        } else if (in_grip) {
+        if (in_grip) {
             ov->resize_active = 1;
             ov->resize_grab_rx = ov->pointer_x;
             ov->resize_grab_ry = ov->pointer_y;
             ov->resize_grab_bw = ov->width;
             ov->resize_grab_bh = ov->height;
+        } else {
+            ov->drag_active = 1;
+            ov->drag_grab_rx = ov->pointer_x;
+            ov->drag_grab_ry = ov->pointer_y;
+            ov->drag_grab_px = ov->pos_x;
+            ov->drag_grab_py = ov->pos_y;
         }
     } else {
         if (ov->drag_active) {
@@ -415,4 +416,15 @@ void overlay_set_scroll_fn(struct overlay *ov, void (*fn)(void *, int), void *da
 void overlay_set_resize_fn(struct overlay *ov, void (*fn)(void *, int, int), void *data) {
     ov->resize_fn = fn;
     ov->resize_data = data;
+}
+
+void overlay_toggle_locked(struct overlay *ov) {
+    ov->locked = !ov->locked;
+    set_input_regions(ov);
+    wl_surface_commit(ov->surface);
+    wl_display_flush(ov->display);
+}
+
+int overlay_is_locked(struct overlay *ov) {
+    return ov->locked;
 }
