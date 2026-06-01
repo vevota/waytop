@@ -12,10 +12,16 @@ main.o: main.c overlay.h player.h
 overlay.o: overlay.c overlay.h protocols/layer-shell-client-protocol.h
 player.o: player.c player.h
 
-protocols/%-protocol.c: protocols/%.xml
+protocols/layer-shell-protocol.c: protocols/wlr-layer-shell-unstable-v1.xml
 	wayland-scanner private-code $< $@
 
-protocols/%-client-protocol.h: protocols/%.xml
+protocols/layer-shell-client-protocol.h: protocols/wlr-layer-shell-unstable-v1.xml
+	wayland-scanner client-header $< $@
+
+protocols/xdg-shell-protocol.c: protocols/xdg-shell.xml
+	wayland-scanner private-code $< $@
+
+protocols/xdg-shell-client-protocol.h: protocols/xdg-shell.xml
 	wayland-scanner client-header $< $@
 
 protocols/layer-shell-protocol.o: protocols/layer-shell-protocol.c \
