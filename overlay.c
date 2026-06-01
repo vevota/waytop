@@ -259,6 +259,4 @@ void overlay_set_position(struct overlay *ov, int x, int y) {
                       ZWLR_LAYER_SURFACE_V1_ANCHOR_LEFT;
     zwlr_layer_surface_v1_set_anchor(ov->layer_surface, anchor);
     zwlr_layer_surface_v1_set_margin(ov->layer_surface, y, 0, 0, x);
-    zwlr_layer_surface_v1_set_size(ov->layer_surface, ov->width, ov->height);
-    wl_surface_commit(ov->surface);
 }

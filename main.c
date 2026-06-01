@@ -20,6 +20,8 @@ struct app {
     int cmd_fd;
     int frame_done;
     int running;
+    int pending_pos;
+    int pending_x, pending_y;
     char socket_path[128];
 };
 
@@ -99,6 +101,9 @@ static void handle_cmd(struct app *app, const char *cmd) {
         app->running = 0;
     } else if (sscanf(cmd, "pos %d %d", &x, &y) == 2) {
         overlay_set_position(app->ov, x, y);
+        app->pending_x = x;
+        app->pending_y = y;
+        app->pending_pos = 1;
     }
 }
 
@@ -213,14 +218,20 @@ int main(int argc, char **argv) {
 
         int mpv_ready = player_update(app.pl);
 
-        if (app.frame_done && mpv_ready) {
+        if (app.frame_done && (mpv_ready || app.pending_pos)) {
             overlay_make_current(app.ov);
-            player_render(app.pl);
+
+            if (mpv_ready) {
+                player_render(app.pl);
+            } else if (app.pending_pos) {
+                glClear(GL_COLOR_BUFFER_BIT);
+            }
 
             struct wl_callback *cb = wl_surface_frame(app.ov->surface);
             wl_callback_add_listener(cb, &frame_listener, &app);
             overlay_swap_buffers(app.ov);
             app.frame_done = 0;
+            app.pending_pos = 0;
         }
 
         wl_display_flush(app.ov->display);
