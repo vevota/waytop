@@ -69,15 +69,6 @@ make
 ./overlay-ctl quit
 ```
 
-### Niri keybinds
-
-```kdl
-binds {
-    Mod+O { spawn "/path/to/waytop/waytop" "-c" "toggle"; }
-    Mod+Shift+O { spawn "/path/to/waytop/overlay-ctl"; }
-}
-```
-
 ## How it works
 
 | Layer | What renders |
