@@ -6,9 +6,15 @@
 #include "overlay.h"
 #include "protocols/layer-shell-client-protocol.h"
 
-static void set_input_region_handle(struct overlay *ov) {
+#define CLAMP(v, lo, hi) ((v) < (lo) ? (lo) : (v) > (hi) ? (hi) : (v))
+
+static void set_input_regions(struct overlay *ov) {
     struct wl_region *region = wl_compositor_create_region(ov->compositor);
     wl_region_add(region, 0, 0, ov->width, DRAG_HANDLE_HEIGHT);
+    if (ov->width >= RESIZE_GRIP_SIZE && ov->height >= RESIZE_GRIP_SIZE)
+        wl_region_add(region, ov->width - RESIZE_GRIP_SIZE,
+                      ov->height - RESIZE_GRIP_SIZE,
+                      RESIZE_GRIP_SIZE, RESIZE_GRIP_SIZE);
     wl_surface_set_input_region(ov->surface, region);
     wl_region_destroy(region);
 }
@@ -84,6 +90,7 @@ static void pointer_leave(void *data, struct wl_pointer *ptr,
     struct overlay *ov = data;
     ov->pointer_entered = 0;
     ov->drag_active = 0;
+    ov->resize_active = 0;
 }
 
 static void pointer_motion(void *data, struct wl_pointer *ptr,
@@ -98,6 +105,12 @@ static void pointer_motion(void *data, struct wl_pointer *ptr,
         overlay_set_position(ov,
             ov->drag_grab_px + (nx - ov->drag_grab_rx),
             ov->drag_grab_py + (ny - ov->drag_grab_ry));
+    } else if (ov->resize_active) {
+        int dw = nx - ov->resize_grab_rx;
+        int dh = ny - ov->resize_grab_ry;
+        int nw = CLAMP(ov->resize_grab_bw + dw, MIN_WIDTH, 9999);
+        int nh = CLAMP(ov->resize_grab_bh + dh, MIN_HEIGHT, 9999);
+        overlay_resize(ov, nw, nh);
     }
 
     ov->pointer_x = nx;
@@ -115,21 +128,30 @@ static void pointer_button(void *data, struct wl_pointer *ptr,
     if (button != BTN_LEFT) return;
 
     if (state == WL_POINTER_BUTTON_STATE_PRESSED) {
-        if (ov->pointer_y < DRAG_HANDLE_HEIGHT) {
+        int in_grip = ov->pointer_x >= ov->width - RESIZE_GRIP_SIZE &&
+                      ov->pointer_y >= ov->height - RESIZE_GRIP_SIZE;
+        int in_handle = ov->pointer_y < DRAG_HANDLE_HEIGHT;
+
+        if (in_handle) {
             ov->drag_active = 1;
             ov->drag_grab_rx = ov->pointer_x;
             ov->drag_grab_ry = ov->pointer_y;
             ov->drag_grab_px = ov->pos_x;
             ov->drag_grab_py = ov->pos_y;
-            set_input_region_handle(ov);
-            wl_surface_commit(ov->surface);
-            wl_display_flush(ov->display);
+        } else if (in_grip) {
+            ov->resize_active = 1;
+            ov->resize_grab_rx = ov->pointer_x;
+            ov->resize_grab_ry = ov->pointer_y;
+            ov->resize_grab_bw = ov->width;
+            ov->resize_grab_bh = ov->height;
         }
-    } else if (ov->drag_active) {
-        ov->drag_active = 0;
-        set_input_region_handle(ov);
-        wl_surface_commit(ov->surface);
-        wl_display_flush(ov->display);
+    } else {
+        if (ov->drag_active) {
+            ov->drag_active = 0;
+        }
+        if (ov->resize_active) {
+            ov->resize_active = 0;
+        }
     }
 }
 
@@ -223,7 +245,7 @@ struct overlay *overlay_create(const char *socket, int width, int height,
     zwlr_layer_surface_v1_set_size(ov->layer_surface, width, height);
     zwlr_layer_surface_v1_set_exclusive_zone(ov->layer_surface, -1);
 
-    set_input_region_handle(ov);
+    set_input_regions(ov);
 
     wl_surface_commit(ov->surface);
     wl_display_roundtrip(ov->display);
@@ -378,7 +400,7 @@ void overlay_resize(struct overlay *ov, int width, int height) {
     if (ov->egl_window)
         wl_egl_window_resize(ov->egl_window, width, height, 0, 0);
     zwlr_layer_surface_v1_set_size(ov->layer_surface, width, height);
-    set_input_region_handle(ov);
+    set_input_regions(ov);
     wl_surface_commit(ov->surface);
     wl_display_flush(ov->display);
 }

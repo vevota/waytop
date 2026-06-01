@@ -7,6 +7,9 @@
 #include <wayland-egl.h>
 
 #define DRAG_HANDLE_HEIGHT 20
+#define RESIZE_GRIP_SIZE 20
+#define MIN_WIDTH 100
+#define MIN_HEIGHT 56
 
 struct overlay {
     struct wl_display *display;
@@ -32,9 +35,14 @@ struct overlay {
 
     int pointer_entered;
     int pointer_x, pointer_y;
+
     int drag_active;
     int drag_grab_rx, drag_grab_ry;
     int drag_grab_px, drag_grab_py;
+
+    int resize_active;
+    int resize_grab_rx, resize_grab_ry;
+    int resize_grab_bw, resize_grab_bh;
 
     void (*scroll_fn)(void *, int);
     void *scroll_data;
