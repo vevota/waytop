@@ -50,6 +50,9 @@ struct overlay {
     void (*resize_fn)(void *, int, int);
     void *resize_data;
 
+    void (*motion_fn)(void *, int, int);
+    void *motion_data;
+
     int locked;
 };
 
@@ -71,6 +74,7 @@ void overlay_set_position(struct overlay *ov, int x, int y);
 void overlay_resize(struct overlay *ov, int width, int height);
 void overlay_set_scroll_fn(struct overlay *ov, void (*fn)(void *, int), void *data);
 void overlay_set_resize_fn(struct overlay *ov, void (*fn)(void *, int, int), void *data);
+void overlay_set_motion_fn(struct overlay *ov, void (*fn)(void *, int, int), void *data);
 void overlay_toggle_locked(struct overlay *ov);
 int overlay_is_locked(struct overlay *ov);
 EGLDisplay overlay_get_egl_display(struct overlay *ov);

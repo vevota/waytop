@@ -111,6 +111,9 @@ static void pointer_motion(void *data, struct wl_pointer *ptr,
         overlay_resize(ov, nw, nh);
     }
 
+    if (ov->motion_fn)
+        ov->motion_fn(ov->motion_data, nx, ny);
+
     ov->pointer_x = nx;
     ov->pointer_y = ny;
 }
@@ -419,6 +422,11 @@ void overlay_set_scroll_fn(struct overlay *ov, void (*fn)(void *, int), void *da
 void overlay_set_resize_fn(struct overlay *ov, void (*fn)(void *, int, int), void *data) {
     ov->resize_fn = fn;
     ov->resize_data = data;
+}
+
+void overlay_set_motion_fn(struct overlay *ov, void (*fn)(void *, int, int), void *data) {
+    ov->motion_fn = fn;
+    ov->motion_data = data;
 }
 
 void overlay_toggle_locked(struct overlay *ov) {

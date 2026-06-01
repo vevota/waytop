@@ -102,6 +102,15 @@ static void on_resize(void *data, int w, int h) {
     player_set_size((struct player *)data, w, h);
 }
 
+static void on_motion(void *data, int x, int y) {
+    struct player *pl = data;
+    char xs[16], ys[16];
+    snprintf(xs, sizeof(xs), "%d", x);
+    snprintf(ys, sizeof(ys), "%d", y);
+    const char *args[] = {"mouse", xs, ys, NULL};
+    mpv_command_async(pl->mpv, 0, args);
+}
+
 static void on_scroll(void *data, int value) {
     struct player *pl = data;
     double vol;
@@ -265,6 +274,7 @@ int main(int argc, char **argv) {
     player_set_wakeup_fd(app.pl, &app.wakeup_fd);
     overlay_set_scroll_fn(app.ov, on_scroll, app.pl);
     overlay_set_resize_fn(app.ov, on_resize, app.pl);
+    overlay_set_motion_fn(app.ov, on_motion, app.pl);
     app.running = 1;
 
     overlay_make_current(app.ov);
