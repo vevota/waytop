@@ -36,6 +36,7 @@ struct overlay {
     int pointer_entered;
     int pointer_x, pointer_y;
 
+    int press_x, press_y;
     int drag_active;
     int drag_grab_rx, drag_grab_ry;
     int drag_grab_px, drag_grab_py;
@@ -50,8 +51,8 @@ struct overlay {
     void (*resize_fn)(void *, int, int);
     void *resize_data;
 
-    void (*motion_fn)(void *, int, int);
-    void *motion_data;
+    void (*pointer_fn)(void *, int, int, int);
+    void *pointer_data;
 
     int locked;
 };
@@ -74,7 +75,7 @@ void overlay_set_position(struct overlay *ov, int x, int y);
 void overlay_resize(struct overlay *ov, int width, int height);
 void overlay_set_scroll_fn(struct overlay *ov, void (*fn)(void *, int), void *data);
 void overlay_set_resize_fn(struct overlay *ov, void (*fn)(void *, int, int), void *data);
-void overlay_set_motion_fn(struct overlay *ov, void (*fn)(void *, int, int), void *data);
+void overlay_set_pointer_fn(struct overlay *ov, void (*fn)(void *, int, int, int), void *data);
 void overlay_toggle_locked(struct overlay *ov);
 int overlay_is_locked(struct overlay *ov);
 EGLDisplay overlay_get_egl_display(struct overlay *ov);

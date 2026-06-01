@@ -97,6 +97,8 @@ static void pointer_leave(void *data, struct wl_pointer *ptr,
     fprintf(stderr, "pointer: leave\n");
 }
 
+#define DRAG_THRESHOLD 5
+
 static void pointer_motion(void *data, struct wl_pointer *ptr,
                            uint32_t time, wl_fixed_t sx, wl_fixed_t sy) {
     (void)ptr;
@@ -115,10 +117,20 @@ static void pointer_motion(void *data, struct wl_pointer *ptr,
         int nw = CLAMP(ov->resize_grab_bw + dw, MIN_WIDTH, 9999);
         int nh = CLAMP(ov->resize_grab_bh + dh, MIN_HEIGHT, 9999);
         overlay_resize(ov, nw, nh);
+    } else if (!ov->locked && (ov->drag_grab_rx || ov->drag_grab_ry)) {
+        if (abs(nx - ov->press_x) > DRAG_THRESHOLD ||
+            abs(ny - ov->press_y) > DRAG_THRESHOLD) {
+            ov->drag_active = 1;
+            ov->drag_grab_rx = ov->press_x;
+            ov->drag_grab_ry = ov->press_y;
+            ov->drag_grab_px = ov->pos_x;
+            ov->drag_grab_py = ov->pos_y;
+            fprintf(stderr, "pointer: drag start at pos %d,%d\n", ov->pos_x, ov->pos_y);
+        }
     }
 
-    if (ov->motion_fn && !ov->locked)
-        ov->motion_fn(ov->motion_data, nx, ny);
+    if (ov->pointer_fn && !ov->locked)
+        ov->pointer_fn(ov->pointer_data, nx, ny, 0);
 
     ov->pointer_x = nx;
     ov->pointer_y = ny;
@@ -138,34 +150,47 @@ static void pointer_button(void *data, struct wl_pointer *ptr,
             state == WL_POINTER_BUTTON_STATE_PRESSED ? "press" : "release",
             ov->locked);
 
-    if (state == WL_POINTER_BUTTON_STATE_PRESSED && !ov->locked) {
-        int in_grip = ov->pointer_x >= ov->width - RESIZE_GRIP_SIZE &&
-                      ov->pointer_y >= ov->height - RESIZE_GRIP_SIZE;
+    if (!ov->locked) {
+        if (state == WL_POINTER_BUTTON_STATE_PRESSED) {
+            int in_grip = ov->pointer_x >= ov->width - RESIZE_GRIP_SIZE &&
+                          ov->pointer_y >= ov->height - RESIZE_GRIP_SIZE;
 
-        if (in_grip) {
-            ov->resize_active = 1;
-            ov->resize_grab_rx = ov->pointer_x;
-            ov->resize_grab_ry = ov->pointer_y;
-            ov->resize_grab_bw = ov->width;
-            ov->resize_grab_bh = ov->height;
-            fprintf(stderr, "pointer: resize start\n");
+            if (in_grip) {
+                ov->resize_active = 1;
+                ov->resize_grab_rx = ov->pointer_x;
+                ov->resize_grab_ry = ov->pointer_y;
+                ov->resize_grab_bw = ov->width;
+                ov->resize_grab_bh = ov->height;
+                fprintf(stderr, "pointer: resize start\n");
+            } else {
+                ov->press_x = ov->pointer_x;
+                ov->press_y = ov->pointer_y;
+                ov->drag_grab_rx = 0;
+                ov->drag_grab_ry = 0;
+                fprintf(stderr, "pointer: press at %d,%d\n", ov->press_x, ov->press_y);
+            }
+
+            if (ov->pointer_fn)
+                ov->pointer_fn(ov->pointer_data, ov->pointer_x, ov->pointer_y, 1);
         } else {
-            ov->drag_active = 1;
-            ov->drag_grab_rx = ov->pointer_x;
-            ov->drag_grab_ry = ov->pointer_y;
-            ov->drag_grab_px = ov->pos_x;
-            ov->drag_grab_py = ov->pos_y;
-            fprintf(stderr, "pointer: drag start at pos %d,%d\n", ov->pos_x, ov->pos_y);
-        }
-    } else {
-        if (ov->drag_active) {
-            ov->drag_active = 0;
-        }
-        if (ov->resize_active) {
-            ov->resize_active = 0;
+            if (ov->drag_active) {
+                ov->drag_active = 0;
+                ov->drag_grab_rx = 0;
+                ov->drag_grab_ry = 0;
+            }
+            if (ov->resize_active) {
+                ov->resize_active = 0;
+            } else if (!ov->drag_active) {
+                if (ov->pointer_fn)
+                    ov->pointer_fn(ov->pointer_data, ov->pointer_x, ov->pointer_y, -1);
+            }
+            ov->drag_grab_rx = 0;
+            ov->drag_grab_ry = 0;
         }
     }
 }
+
+
 
 static void pointer_axis(void *data, struct wl_pointer *ptr,
                          uint32_t time, uint32_t axis, wl_fixed_t value) {
@@ -430,9 +455,9 @@ void overlay_set_resize_fn(struct overlay *ov, void (*fn)(void *, int, int), voi
     ov->resize_data = data;
 }
 
-void overlay_set_motion_fn(struct overlay *ov, void (*fn)(void *, int, int), void *data) {
-    ov->motion_fn = fn;
-    ov->motion_data = data;
+void overlay_set_pointer_fn(struct overlay *ov, void (*fn)(void *, int, int, int), void *data) {
+    ov->pointer_fn = fn;
+    ov->pointer_data = data;
 }
 
 void overlay_toggle_locked(struct overlay *ov) {

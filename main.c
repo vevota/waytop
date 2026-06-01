@@ -102,13 +102,22 @@ static void on_resize(void *data, int w, int h) {
     player_set_size((struct player *)data, w, h);
 }
 
-static void on_motion(void *data, int x, int y) {
+static void on_pointer(void *data, int x, int y, int type) {
     struct player *pl = data;
     char xs[16], ys[16];
     snprintf(xs, sizeof(xs), "%d", x);
     snprintf(ys, sizeof(ys), "%d", y);
-    const char *args[] = {"mouse", xs, ys, NULL};
-    mpv_command_async(pl->mpv, 0, args);
+
+    if (type == 0) {
+        const char *args[] = {"mouse", xs, ys, NULL};
+        mpv_command_async(pl->mpv, 0, args);
+    } else if (type == 1) {
+        const char *args[] = {"mouse", xs, ys, "0", NULL};
+        mpv_command_async(pl->mpv, 0, args);
+    } else if (type == -1) {
+        const char *args[] = {"mouse", xs, ys, "0", "up", NULL};
+        mpv_command_async(pl->mpv, 0, args);
+    }
 }
 
 static void on_scroll(void *data, int value) {
@@ -274,7 +283,7 @@ int main(int argc, char **argv) {
     player_set_wakeup_fd(app.pl, &app.wakeup_fd);
     overlay_set_scroll_fn(app.ov, on_scroll, app.pl);
     overlay_set_resize_fn(app.ov, on_resize, app.pl);
-    overlay_set_motion_fn(app.ov, on_motion, app.pl);
+    overlay_set_pointer_fn(app.ov, on_pointer, app.pl);
     app.running = 1;
 
     overlay_make_current(app.ov);
