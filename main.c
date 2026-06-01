@@ -214,7 +214,7 @@ int main(int argc, char **argv) {
 
         int mpv_ready = player_update(app.pl);
 
-        if (app.frame_done && mpv_ready) {
+        if (mpv_ready) {
             overlay_make_current(app.ov);
             player_render(app.pl);
 
@@ -235,7 +235,7 @@ int main(int argc, char **argv) {
         fds[2].fd = app.cmd_fd;
         fds[2].events = POLLIN;
 
-        poll(fds, 3, -1);
+        poll(fds, 3, 16);
 
         if (fds[0].revents & POLLIN)
             wl_display_dispatch(app.ov->display);
