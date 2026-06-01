@@ -1,0 +1,44 @@
+#ifndef OVERLAY_H
+#define OVERLAY_H
+
+#include <stdint.h>
+#include <EGL/egl.h>
+#include <wayland-client.h>
+#include <wayland-egl.h>
+
+struct overlay {
+    struct wl_display *display;
+    struct wl_compositor *compositor;
+    struct wl_surface *surface;
+    struct zwlr_layer_shell_v1 *layer_shell;
+    struct zwlr_layer_surface_v1 *layer_surface;
+
+    struct wl_egl_window *egl_window;
+    EGLDisplay egl_display;
+    EGLContext egl_context;
+    EGLSurface egl_surface;
+    EGLConfig egl_config;
+
+    int width;
+    int height;
+    int configured;
+    int closed;
+};
+
+enum anchor_pos {
+    ANCHOR_BOTTOM_RIGHT,
+    ANCHOR_BOTTOM_LEFT,
+    ANCHOR_TOP_RIGHT,
+    ANCHOR_TOP_LEFT,
+};
+
+struct overlay *overlay_create(const char *socket, int width, int height,
+                               enum anchor_pos pos, int margin);
+void overlay_destroy(struct overlay *ov);
+int overlay_configured(struct overlay *ov);
+int overlay_closed(struct overlay *ov);
+void overlay_make_current(struct overlay *ov);
+void overlay_swap_buffers(struct overlay *ov);
+EGLDisplay overlay_get_egl_display(struct overlay *ov);
+
+#endif
