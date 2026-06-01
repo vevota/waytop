@@ -1,9 +1,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <linux/input-event-codes.h>
 
 #include "overlay.h"
 #include "protocols/layer-shell-client-protocol.h"
+
+static void set_input_region_handle(struct overlay *ov) {
+    struct wl_region *region = wl_compositor_create_region(ov->compositor);
+    wl_region_add(region, 0, 0, ov->width, DRAG_HANDLE_HEIGHT);
+    wl_surface_set_input_region(ov->surface, region);
+    wl_region_destroy(region);
+}
 
 static void registry_global(void *data, struct wl_registry *registry,
                             uint32_t name, const char *interface, uint32_t ver) {
@@ -16,6 +24,9 @@ static void registry_global(void *data, struct wl_registry *registry,
     } else if (strcmp(interface, "zwlr_layer_shell_v1") == 0) {
         ov->layer_shell = wl_registry_bind(registry, name,
                                            &zwlr_layer_shell_v1_interface, 4);
+    } else if (strcmp(interface, "wl_seat") == 0) {
+        ov->seat = wl_registry_bind(registry, name,
+                                    &wl_seat_interface, 1);
     }
 }
 
@@ -53,10 +64,119 @@ static const struct zwlr_layer_surface_v1_listener layer_surface_listener = {
     .closed = layer_surface_closed,
 };
 
+static void pointer_enter(void *data, struct wl_pointer *ptr,
+                          uint32_t serial, struct wl_surface *surface,
+                          wl_fixed_t sx, wl_fixed_t sy) {
+    (void)ptr;
+    (void)serial;
+    (void)surface;
+    struct overlay *ov = data;
+    ov->pointer_entered = 1;
+    ov->pointer_x = wl_fixed_to_int(sx);
+    ov->pointer_y = wl_fixed_to_int(sy);
+}
+
+static void pointer_leave(void *data, struct wl_pointer *ptr,
+                          uint32_t serial, struct wl_surface *surface) {
+    (void)ptr;
+    (void)serial;
+    (void)surface;
+    struct overlay *ov = data;
+    ov->pointer_entered = 0;
+    ov->drag_active = 0;
+}
+
+static void pointer_motion(void *data, struct wl_pointer *ptr,
+                           uint32_t time, wl_fixed_t sx, wl_fixed_t sy) {
+    (void)ptr;
+    (void)time;
+    struct overlay *ov = data;
+    int nx = wl_fixed_to_int(sx);
+    int ny = wl_fixed_to_int(sy);
+
+    if (ov->drag_active) {
+        int dx = nx - ov->drag_grab_x;
+        int dy = ny - ov->drag_grab_y;
+        overlay_set_position(ov, ov->pos_x + dx, ov->pos_y + dy);
+    }
+
+    ov->pointer_x = nx;
+    ov->pointer_y = ny;
+}
+
+static void pointer_button(void *data, struct wl_pointer *ptr,
+                           uint32_t serial, uint32_t time,
+                           uint32_t button, uint32_t state) {
+    (void)ptr;
+    (void)serial;
+    (void)time;
+    struct overlay *ov = data;
+
+    if (button != BTN_LEFT) return;
+
+    if (state == WL_POINTER_BUTTON_STATE_PRESSED) {
+        if (ov->pointer_y < DRAG_HANDLE_HEIGHT) {
+            ov->drag_active = 1;
+            ov->drag_grab_x = ov->pointer_x;
+            ov->drag_grab_y = ov->pointer_y;
+            set_input_region_handle(ov);
+            wl_surface_commit(ov->surface);
+            wl_display_flush(ov->display);
+        }
+    } else if (ov->drag_active) {
+        ov->drag_active = 0;
+        set_input_region_handle(ov);
+        wl_surface_commit(ov->surface);
+        wl_display_flush(ov->display);
+    }
+}
+
+static void pointer_axis(void *data, struct wl_pointer *ptr,
+                         uint32_t time, uint32_t axis, wl_fixed_t value) {
+    (void)data;
+    (void)ptr;
+    (void)time;
+    (void)axis;
+    (void)value;
+}
+
+static const struct wl_pointer_listener pointer_listener = {
+    .enter = pointer_enter,
+    .leave = pointer_leave,
+    .motion = pointer_motion,
+    .button = pointer_button,
+    .axis = pointer_axis,
+};
+
+static void seat_capabilities(void *data, struct wl_seat *seat,
+                              uint32_t caps) {
+    struct overlay *ov = data;
+    if ((caps & WL_SEAT_CAPABILITY_POINTER) && !ov->pointer) {
+        ov->pointer = wl_seat_get_pointer(seat);
+        wl_pointer_add_listener(ov->pointer, &pointer_listener, ov);
+    } else if (!(caps & WL_SEAT_CAPABILITY_POINTER) && ov->pointer) {
+        wl_pointer_destroy(ov->pointer);
+        ov->pointer = NULL;
+    }
+}
+
+static void seat_name(void *data, struct wl_seat *seat, const char *name) {
+    (void)data;
+    (void)seat;
+    (void)name;
+}
+
+static const struct wl_seat_listener seat_listener = {
+    .capabilities = seat_capabilities,
+    .name = seat_name,
+};
+
 struct overlay *overlay_create(const char *socket, int width, int height,
                                enum anchor_pos pos, int margin) {
+    (void)pos;
     struct overlay *ov = calloc(1, sizeof(*ov));
     ov->width = width;
+    ov->height = height;
 
     ov->display = wl_display_connect(socket);
     if (!ov->display) {
@@ -75,6 +195,9 @@ struct overlay *overlay_create(const char *socket, int width, int height,
         return NULL;
     }
 
+    if (ov->seat)
+        wl_seat_add_listener(ov->seat, &seat_listener, ov);
+
     ov->surface = wl_compositor_create_surface(ov->compositor);
 
     ov->layer_surface = zwlr_layer_shell_v1_get_layer_surface(
@@ -84,33 +207,12 @@ struct overlay *overlay_create(const char *socket, int width, int height,
     zwlr_layer_surface_v1_add_listener(ov->layer_surface,
                                        &layer_surface_listener, ov);
 
-    uint32_t anchor = 0;
-    switch (pos) {
-    case ANCHOR_BOTTOM_RIGHT:
-        anchor = ZWLR_LAYER_SURFACE_V1_ANCHOR_BOTTOM |
-                 ZWLR_LAYER_SURFACE_V1_ANCHOR_RIGHT;
-        break;
-    case ANCHOR_BOTTOM_LEFT:
-        anchor = ZWLR_LAYER_SURFACE_V1_ANCHOR_BOTTOM |
-                 ZWLR_LAYER_SURFACE_V1_ANCHOR_LEFT;
-        break;
-    case ANCHOR_TOP_RIGHT:
-        anchor = ZWLR_LAYER_SURFACE_V1_ANCHOR_TOP |
-                 ZWLR_LAYER_SURFACE_V1_ANCHOR_RIGHT;
-        break;
-    case ANCHOR_TOP_LEFT:
-        anchor = ZWLR_LAYER_SURFACE_V1_ANCHOR_TOP |
-                 ZWLR_LAYER_SURFACE_V1_ANCHOR_LEFT;
-        break;
-    }
+    ov->pos_x = margin;
+    ov->pos_y = margin;
+    uint32_t anchor = ZWLR_LAYER_SURFACE_V1_ANCHOR_TOP |
+                      ZWLR_LAYER_SURFACE_V1_ANCHOR_LEFT;
     zwlr_layer_surface_v1_set_anchor(ov->layer_surface, anchor);
-
-    int t = 0, b = 0, l = 0, r = 0;
-    if (anchor & ZWLR_LAYER_SURFACE_V1_ANCHOR_TOP) t = margin;
-    if (anchor & ZWLR_LAYER_SURFACE_V1_ANCHOR_BOTTOM) b = margin;
-    if (anchor & ZWLR_LAYER_SURFACE_V1_ANCHOR_LEFT) l = margin;
-    if (anchor & ZWLR_LAYER_SURFACE_V1_ANCHOR_RIGHT) r = margin;
-    zwlr_layer_surface_v1_set_margin(ov->layer_surface, t, r, b, l);
+    zwlr_layer_surface_v1_set_margin(ov->layer_surface, margin, 0, 0, margin);
 
     zwlr_layer_surface_v1_set_keyboard_interactivity(
         ov->layer_surface, ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_NONE);
@@ -118,9 +220,7 @@ struct overlay *overlay_create(const char *socket, int width, int height,
     zwlr_layer_surface_v1_set_size(ov->layer_surface, width, height);
     zwlr_layer_surface_v1_set_exclusive_zone(ov->layer_surface, -1);
 
-    struct wl_region *empty = wl_compositor_create_region(ov->compositor);
-    wl_surface_set_input_region(ov->surface, empty);
-    wl_region_destroy(empty);
+    set_input_region_handle(ov);
 
     wl_surface_commit(ov->surface);
     wl_display_roundtrip(ov->display);
@@ -219,6 +319,10 @@ void overlay_destroy(struct overlay *ov) {
     if (ov->egl_display)
         eglTerminate(ov->egl_display);
 
+    if (ov->pointer)
+        wl_pointer_destroy(ov->pointer);
+    if (ov->seat)
+        wl_seat_destroy(ov->seat);
     if (ov->layer_surface)
         zwlr_layer_surface_v1_destroy(ov->layer_surface);
     if (ov->layer_shell)
@@ -250,15 +354,17 @@ void overlay_swap_buffers(struct overlay *ov) {
     eglSwapBuffers(ov->egl_display, ov->egl_surface);
 }
 
-EGLDisplay overlay_get_egl_display(struct overlay *ov) {
-    return ov->egl_display;
-}
-
 void overlay_set_position(struct overlay *ov, int x, int y) {
+    ov->pos_x = x;
+    ov->pos_y = y;
     uint32_t anchor = ZWLR_LAYER_SURFACE_V1_ANCHOR_TOP |
                       ZWLR_LAYER_SURFACE_V1_ANCHOR_LEFT;
     zwlr_layer_surface_v1_set_anchor(ov->layer_surface, anchor);
     zwlr_layer_surface_v1_set_margin(ov->layer_surface, y, 0, 0, x);
     wl_surface_commit(ov->surface);
     wl_display_flush(ov->display);
+}
+
+EGLDisplay overlay_get_egl_display(struct overlay *ov) {
+    return ov->egl_display;
 }

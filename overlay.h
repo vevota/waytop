@@ -6,6 +6,8 @@
 #include <wayland-client.h>
 #include <wayland-egl.h>
 
+#define DRAG_HANDLE_HEIGHT 20
+
 struct overlay {
     struct wl_display *display;
     struct wl_compositor *compositor;
@@ -19,10 +21,19 @@ struct overlay {
     EGLSurface egl_surface;
     EGLConfig egl_config;
 
+    struct wl_seat *seat;
+    struct wl_pointer *pointer;
+
+    int pos_x, pos_y;
     int width;
     int height;
     int configured;
     int closed;
+
+    int pointer_entered;
+    int pointer_x, pointer_y;
+    int drag_active;
+    int drag_grab_x, drag_grab_y;
 };
 
 enum anchor_pos {

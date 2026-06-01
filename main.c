@@ -40,12 +40,11 @@ static void print_usage(const char *name) {
         "\n"
         "options:\n"
         "  -s WxH         size (default: 480x270)\n"
-        "  -p POS         position: br (default), bl, tr, tl\n"
-        "  -m N           margin from edge (default: 16)\n"
+        "  -m N           margin from top-left (default: 16)\n"
         "  -h             show this help\n"
         "\n"
         "example:\n"
-        "  %s -s 640x360 -p br https://www.youtube.com/watch?v=dQw4w9WgXcQ\n",
+        "  %s -s 640x360 https://www.youtube.com/watch?v=dQw4w9WgXcQ\n",
         name, name);
 }
 
@@ -53,15 +52,6 @@ static int parse_size(const char *s, int *w, int *h) {
     int n = sscanf(s, "%dx%d", w, h);
     if (n != 2 || *w <= 0 || *h <= 0) return -1;
     return 0;
-}
-
-static enum anchor_pos parse_pos(const char *s) {
-    if (strcmp(s, "br") == 0) return ANCHOR_BOTTOM_RIGHT;
-    if (strcmp(s, "bl") == 0) return ANCHOR_BOTTOM_LEFT;
-    if (strcmp(s, "tr") == 0) return ANCHOR_TOP_RIGHT;
-    if (strcmp(s, "tl") == 0) return ANCHOR_TOP_LEFT;
-    fprintf(stderr, "invalid position '%s', using bottom-right\n", s);
-    return ANCHOR_BOTTOM_RIGHT;
 }
 
 static int setup_cmd_socket(char *path, size_t pathlen) {
@@ -123,7 +113,6 @@ int main(int argc, char **argv) {
     int width = 480;
     int height = 270;
     int margin = 16;
-    enum anchor_pos pos = ANCHOR_BOTTOM_RIGHT;
     const char *url = NULL;
 
     int i;
@@ -137,8 +126,6 @@ int main(int argc, char **argv) {
                 fprintf(stderr, "invalid size '%s'\n", argv[i]);
                 return 1;
             }
-        } else if (strcmp(argv[i], "-p") == 0 && i + 1 < argc) {
-            pos = parse_pos(argv[++i]);
         } else if (strcmp(argv[i], "-m") == 0 && i + 1 < argc) {
             margin = atoi(argv[++i]);
         } else if (strcmp(argv[i], "-h") == 0) {
@@ -159,7 +146,7 @@ int main(int argc, char **argv) {
 
     struct app app = {0};
 
-    app.ov = overlay_create(NULL, width, height, pos, margin);
+    app.ov = overlay_create(NULL, width, height, ANCHOR_TOP_LEFT, margin);
     if (!app.ov) {
         fprintf(stderr, "failed to create overlay\n");
         return 1;
