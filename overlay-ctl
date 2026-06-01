@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-set -e
 
 pid=$(pidof wl-overlay)
 if [ -z "$pid" ]; then
@@ -13,13 +12,31 @@ if [ ! -S "$socket" ]; then
     exit 1
 fi
 
+send_pos() {
+    echo "pos $1 $2" | socat - UNIX-CONNECT:"$socket"
+}
+
 if [ "$1" = "pos" ] && [ -n "$2" ] && [ -n "$3" ]; then
-    echo "pos $2 $3" | socat - UNIX-CONNECT:"$socket"
+    send_pos "$2" "$3"
     exit $?
 fi
 
-coords=$(zenity --forms --title="wl-overlay" --text="Position" \
-    --add-entry="X" --add-entry="Y" 2>/dev/null)
-[ -z "$coords" ] && exit 0
+if command -v slurp >/dev/null 2>&1; then
+    coords=$(slurp -f "%x %y" 2>/dev/null)
+    if [ -n "$coords" ]; then
+        send_pos ${coords% *} ${coords#* }
+        exit $?
+    fi
+fi
 
-echo "pos $coords" | socat - UNIX-CONNECT:"$socket"
+if command -v zenity >/dev/null 2>&1; then
+    coords=$(zenity --forms --title="wl-overlay" --text="Position" \
+        --add-entry="X" --add-entry="Y" 2>/dev/null)
+    if [ -n "$coords" ]; then
+        send_pos ${coords%|*} ${coords#*|}
+        exit $?
+    fi
+fi
+
+echo "install slurp or zenity to pick a position" >&2
+exit 1
