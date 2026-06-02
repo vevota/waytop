@@ -113,16 +113,18 @@ void ui_draw(struct overlay *ov, struct player *pl, int unlocked) {
 
     if (!pl) return;
 
-    double paused = 0, pos = 0, dur = 1;
-    mpv_get_property(pl->mpv, "pause", MPV_FORMAT_DOUBLE, &paused);
+    int pause_flag = 0;
+    mpv_get_property(pl->mpv, "pause", MPV_FORMAT_FLAG, &pause_flag);
+    double pos = 0, dur = 1;
     mpv_get_property(pl->mpv, "time-pos", MPV_FORMAT_DOUBLE, &pos);
     mpv_get_property(pl->mpv, "duration", MPV_FORMAT_DOUBLE, &dur);
     if (dur <= 0) dur = 1;
     if (pos < 0) pos = 0;
 
     float c = 0.8f;
+    fprintf(stderr, "ui: pause=%d\n", pause_flag);
 
-    if (paused > 0) {
+    if (pause_flag) {
         draw_rect(btn_left + 6,  btn_top + 4,  5, UI_BTN_S - 8, c, c, c, 1);
         draw_rect(btn_left + 16, btn_top + 4,  5, UI_BTN_S - 8, c, c, c, 1);
     } else {
