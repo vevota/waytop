@@ -102,7 +102,14 @@ void ui_draw(struct overlay *ov, struct player *pl, int unlocked) {
     struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);
     uint64_t now = (uint64_t)ts.tv_sec * 1000000000ULL + (uint64_t)ts.tv_nsec;
-    if (now - ov->hover_ns > UI_HOVER_TIMEOUT)
+    uint64_t delta = now - ov->hover_ns;
+    static int dc;
+    if ((dc++ % 60) == 0)
+        fprintf(stderr, "hover: delta=%lluns ns=%llu timeout=%llu\n",
+                (unsigned long long)delta,
+                (unsigned long long)ov->hover_ns,
+                (unsigned long long)UI_HOVER_TIMEOUT);
+    if (delta > UI_HOVER_TIMEOUT)
         return;
 
     ui_init();
