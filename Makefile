@@ -1,16 +1,17 @@
 CFLAGS = -g -O2 -Wall -Wextra -std=c99 \
          $(shell pkg-config --cflags wayland-client wayland-egl egl glesv2 mpv)
 LDLIBS = $(shell pkg-config --libs wayland-client wayland-egl egl glesv2 mpv)
-LDLIBS += -lrt
+LDLIBS += -lrt -lm
 
 WL_PROTOCOLS = protocols/layer-shell-protocol.o protocols/xdg-shell-protocol.o
 
-waytop: main.o overlay.o player.o $(WL_PROTOCOLS)
+waytop: main.o overlay.o player.o ui.o $(WL_PROTOCOLS)
 	$(CC) $(CFLAGS) -o $@ $^ $(LDLIBS)
 
-main.o: main.c overlay.h player.h
+main.o: main.c overlay.h player.h ui.h
 overlay.o: overlay.c overlay.h protocols/layer-shell-client-protocol.h
 player.o: player.c player.h
+ui.o: ui.c ui.h overlay.h player.h
 
 protocols/layer-shell-protocol.c: protocols/wlr-layer-shell-unstable-v1.xml
 	wayland-scanner private-code $< $@

@@ -13,6 +13,7 @@
 
 #include "overlay.h"
 #include "player.h"
+#include "ui.h"
 
 struct app {
     struct overlay *ov;
@@ -103,21 +104,32 @@ static void on_resize(void *data, int w, int h) {
 }
 
 static void on_pointer(void *data, int x, int y, int type) {
-    struct player *pl = data;
-    char xs[16], ys[16];
-    snprintf(xs, sizeof(xs), "%d", x);
-    snprintf(ys, sizeof(ys), "%d", y);
-    fprintf(stderr, "mpv: mouse %d %d type=%d\n", x, y, type);
+    struct app *app = data;
+    struct player *pl = app->pl;
 
-    if (type == 0) {
-        const char *args[] = {"mouse", xs, ys, NULL};
-        mpv_command_async(pl->mpv, 0, args);
-    } else if (type == 1) {
-        const char *args[] = {"mouse", xs, ys, "0", NULL};
-        mpv_command_async(pl->mpv, 0, args);
-    } else if (type == -1) {
-        const char *args[] = {"mouse", xs, ys, "0", "up", NULL};
-        mpv_command_async(pl->mpv, 0, args);
+    if (type == 1) {
+        int seek_origin;
+        if (ui_hit_play(app->ov, x, y)) {
+            const char *args[] = {"cycle", "pause", NULL};
+            player_cmd(pl, args);
+            return;
+        } else if (ui_hit_seek(app->ov, x, y, &seek_origin)) {
+            double dur = 1;
+            mpv_get_property(pl->mpv, "duration", MPV_FORMAT_DOUBLE, &dur);
+            if (dur > 0) {
+                int seek_l = UI_MARGIN + UI_BTN_S + UI_MARGIN;
+                int seek_r = app->ov->width - UI_MARGIN;
+                double ratio = (double)(x - seek_l) / (seek_r - seek_l);
+                if (ratio < 0) ratio = 0;
+                if (ratio > 1) ratio = 1;
+                double seek_to = ratio * dur;
+                char buf[32];
+                snprintf(buf, sizeof(buf), "%.3f", seek_to);
+                const char *args[] = {"seek", buf, "absolute", NULL};
+                player_cmd(pl, args);
+            }
+            return;
+        }
     }
 }
 
@@ -284,7 +296,7 @@ int main(int argc, char **argv) {
     player_set_wakeup_fd(app.pl, &app.wakeup_fd);
     overlay_set_scroll_fn(app.ov, on_scroll, app.pl);
     overlay_set_resize_fn(app.ov, on_resize, app.pl);
-    overlay_set_pointer_fn(app.ov, on_pointer, app.pl);
+    overlay_set_pointer_fn(app.ov, on_pointer, &app);
     app.running = 1;
 
     overlay_make_current(app.ov);
@@ -307,6 +319,8 @@ int main(int argc, char **argv) {
         if (mpv_ready) {
             overlay_make_current(app.ov);
             player_render(app.pl);
+
+            ui_draw(app.ov, app.pl, !overlay_is_locked(app.ov));
 
             struct wl_callback *cb = wl_surface_frame(app.ov->surface);
             wl_callback_add_listener(cb, &frame_listener, &app);
