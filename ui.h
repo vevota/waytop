@@ -9,7 +9,7 @@ struct overlay;
 #define UI_MARGIN 8
 
 #define UI_SEEK_S 30
-#define UI_HOVER_TIMEOUT 2000000000ULL
+#define UI_HOVER_TIMEOUT 999999999999ULL
 
 void ui_draw(struct overlay *ov, struct player *pl, int unlocked);
 int ui_hit_play(struct overlay *ov, int x, int y);
