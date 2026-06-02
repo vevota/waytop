@@ -240,6 +240,9 @@ struct overlay *overlay_create(const char *socket, int width, int height,
     ov->locked = 1;
     ov->width = width;
     ov->height = height;
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    ov->hover_ns = (uint64_t)ts.tv_sec * 1000000000ULL + (uint64_t)ts.tv_nsec;
 
     ov->display = wl_display_connect(socket);
     if (!ov->display) {

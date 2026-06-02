@@ -133,13 +133,13 @@ void ui_draw(struct overlay *ov, struct player *pl, int unlocked) {
     int btn_left = UI_MARGIN;
 
     if (pause_flag) {
-        draw_rect(btn_left + 6,  btn_top + 4,  5, UI_BTN_S - 8, c, c, c, 1);
-        draw_rect(btn_left + 16, btn_top + 4,  5, UI_BTN_S - 8, c, c, c, 1);
-    } else {
         float cx = btn_left + 8;
         float cy = btn_top + UI_BTN_S / 2.0f;
         float half = UI_BTN_S / 3.0f;
         draw_tri(cx, cy - half, cx, cy + half, cx + half * 1.2f, cy, c, c, c, 1);
+    } else {
+        draw_rect(btn_left + 6,  btn_top + 4,  5, UI_BTN_S - 8, c, c, c, 1);
+        draw_rect(btn_left + 16, btn_top + 4,  5, UI_BTN_S - 8, c, c, c, 1);
     }
 
     int seek_l = btn_left + UI_BTN_S + UI_MARGIN;
@@ -158,25 +158,25 @@ void ui_draw(struct overlay *ov, struct player *pl, int unlocked) {
         draw_rect(dot_x - dot_r/2, seek_y - 1, dot_r, UI_SEEK_H + 2, c, c, c, 1);
     }
 
-    int btn_r_x = seek_r + UI_MARGIN;
-    int btn_r_y = bar_y + (UI_BAR_H - UI_SEEK_S) / 2;
+    int btn_y = bar_y + (UI_BAR_H - UI_SEEK_S) / 2;
 
-    draw_rect(btn_r_x, btn_r_y, UI_SEEK_S, UI_SEEK_S, 0.2f, 0.2f, 0.2f, 1);
-    draw_tri(btn_r_x + 5,  btn_r_y + 5,
-             btn_r_x + 5,  btn_r_y + UI_SEEK_S - 5,
-             btn_r_x + 20, btn_r_y + UI_SEEK_S/2, c, c, c, 1);
-    draw_tri(btn_r_x + 12, btn_r_y + 5,
-             btn_r_x + 12, btn_r_y + UI_SEEK_S - 5,
-             btn_r_x + 27, btn_r_y + UI_SEEK_S/2, c, c, c, 1);
+    int rw_x = seek_r + UI_MARGIN;
+    draw_rect(rw_x, btn_y, UI_SEEK_S, UI_SEEK_S, 0.2f, 0.2f, 0.2f, 1);
+    draw_tri(rw_x + 20, btn_y + UI_SEEK_S/2,
+             rw_x + 5,  btn_y + 5,
+             rw_x + 5,  btn_y + UI_SEEK_S - 5, c, c, c, 1);
+    draw_tri(rw_x + 27, btn_y + UI_SEEK_S/2,
+             rw_x + 12, btn_y + 5,
+             rw_x + 12, btn_y + UI_SEEK_S - 5, c, c, c, 1);
 
-    int btn_f_x = btn_r_x + UI_SEEK_S + UI_MARGIN;
-    draw_rect(btn_f_x, btn_r_y, UI_SEEK_S, UI_SEEK_S, 0.2f, 0.2f, 0.2f, 1);
-    draw_tri(btn_f_x + 10, btn_r_y + 5,
-             btn_f_x + 10, btn_r_y + UI_SEEK_S - 5,
-             btn_f_x + 25, btn_r_y + UI_SEEK_S/2, c, c, c, 1);
-    draw_tri(btn_f_x + 3,  btn_r_y + 5,
-             btn_f_x + 3,  btn_r_y + UI_SEEK_S - 5,
-             btn_f_x + 18, btn_r_y + UI_SEEK_S/2, c, c, c, 1);
+    int ff_x = rw_x + UI_SEEK_S + UI_MARGIN;
+    draw_rect(ff_x, btn_y, UI_SEEK_S, UI_SEEK_S, 0.2f, 0.2f, 0.2f, 1);
+    draw_tri(ff_x + 5,  btn_y + UI_SEEK_S/2,
+             ff_x + 20, btn_y + 5,
+             ff_x + 20, btn_y + UI_SEEK_S - 5, c, c, c, 1);
+    draw_tri(ff_x + 12, btn_y + UI_SEEK_S/2,
+             ff_x + 27, btn_y + 5,
+             ff_x + 27, btn_y + UI_SEEK_S - 5, c, c, c, 1);
 }
 
 int ui_hit_play(struct overlay *ov, int x, int y) {
