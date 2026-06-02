@@ -4,6 +4,8 @@ A click-through video overlay for Wayland compositors. Shows a floating video wi
 
 Think of it as an OnTopReplica alternative for Linux.
 
+![example](example.png)
+
 ## Features
 
 - **Click-through by default**: video plays on top of your game, clicks pass through
