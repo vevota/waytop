@@ -319,10 +319,9 @@ int main(int argc, char **argv) {
 
         int mpv_ready = player_update(app.pl);
 
-        if (mpv_ready) {
+        if (app.frame_done) {
             overlay_make_current(app.ov);
-            player_render(app.pl);
-
+            if (mpv_ready) player_render(app.pl);
             ui_draw(app.ov, app.pl, !overlay_is_locked(app.ov));
 
             struct wl_callback *cb = wl_surface_frame(app.ov->surface);
