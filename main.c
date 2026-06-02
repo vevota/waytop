@@ -1,3 +1,4 @@
+#define _POSIX_C_SOURCE 200809L
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -270,9 +271,21 @@ int main(int argc, char **argv) {
     }
 
     if (!url) {
-        fprintf(stderr, "no url specified\n");
-        print_usage(argv[0]);
-        return 1;
+        fprintf(stderr, "URL: ");
+        char *line = NULL;
+        size_t n = 0;
+        if (getline(&line, &n, stdin) < 1) {
+            free(line);
+            return 1;
+        }
+        size_t len = strlen(line);
+        while (len > 0 && (line[len-1] == '\n' || line[len-1] == '\r'))
+            line[--len] = '\0';
+        if (len == 0) {
+            free(line);
+            return 1;
+        }
+        url = line;
     }
 
     struct app app = {0};
