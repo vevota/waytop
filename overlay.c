@@ -1,6 +1,8 @@
+#define _POSIX_C_SOURCE 199309L
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <linux/input-event-codes.h>
 
 #include "overlay.h"
@@ -82,7 +84,6 @@ static void pointer_enter(void *data, struct wl_pointer *ptr,
     ov->pointer_entered = 1;
     ov->pointer_x = wl_fixed_to_int(sx);
     ov->pointer_y = wl_fixed_to_int(sy);
-    fprintf(stderr, "pointer: enter %d %d\n", ov->pointer_x, ov->pointer_y);
 }
 
 static void pointer_leave(void *data, struct wl_pointer *ptr,
@@ -134,6 +135,9 @@ static void pointer_motion(void *data, struct wl_pointer *ptr,
     if (ov->pointer_fn && !ov->locked)
         ov->pointer_fn(ov->pointer_data, nx, ny, 0);
 
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    ov->hover_ns = (uint64_t)ts.tv_sec * 1000000000ULL + (uint64_t)ts.tv_nsec;
     ov->pointer_x = nx;
     ov->pointer_y = ny;
 }

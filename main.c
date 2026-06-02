@@ -116,12 +116,20 @@ static void on_pointer(void *data, int x, int y, int type) {
             const char *args[] = {"cycle", "pause", NULL};
             player_cmd(pl, args);
             return;
+        } else if (ui_hit_rewind(app->ov, x, y)) {
+            const char *args[] = {"seek", "-30", NULL};
+            player_cmd(pl, args);
+            return;
+        } else if (ui_hit_forward(app->ov, x, y)) {
+            const char *args[] = {"seek", "30", NULL};
+            player_cmd(pl, args);
+            return;
         } else if (ui_hit_seek(app->ov, x, y, &seek_origin)) {
             double dur = 1;
             mpv_get_property(pl->mpv, "duration", MPV_FORMAT_DOUBLE, &dur);
             if (dur > 0) {
-                int seek_l = UI_MARGIN + UI_BTN_S + UI_MARGIN;
-                int seek_r = app->ov->width - UI_MARGIN;
+                int seek_l = seek_origin;
+                int seek_r = app->ov->width - UI_MARGIN - (UI_SEEK_S + UI_MARGIN) * 2;
                 double ratio = (double)(x - seek_l) / (seek_r - seek_l);
                 if (ratio < 0) ratio = 0;
                 if (ratio > 1) ratio = 1;

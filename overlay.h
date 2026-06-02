@@ -2,6 +2,7 @@
 #define OVERLAY_H
 
 #include <stdint.h>
+#include <time.h>
 #include <EGL/egl.h>
 #include <wayland-client.h>
 #include <wayland-egl.h>
@@ -55,6 +56,7 @@ struct overlay {
     void (*pointer_fn)(void *, int, int, int);
     void *pointer_data;
 
+    uint64_t hover_ns;
     int locked;
 };
 
