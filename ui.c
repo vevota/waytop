@@ -95,6 +95,8 @@ void ui_draw(struct overlay *ov, struct player *pl, int unlocked) {
     int h = ov->height;
     if (w < 1 || h < 1) return;
 
+    if (!unlocked) return;
+
     ui_init();
 
     glViewport(0, 0, w, h);
@@ -107,7 +109,7 @@ void ui_draw(struct overlay *ov, struct player *pl, int unlocked) {
     int btn_left = UI_MARGIN;
     int btn_top = bar_y + (UI_BAR_H - UI_BTN_S) / 2;
 
-    draw_rect(0, bar_y, w, UI_BAR_H, 0, 0, 0, unlocked ? 0.7f : 0.3f);
+    draw_rect(0, bar_y, w, UI_BAR_H, 0, 0, 0, 0.7f);
 
     if (!pl) return;
 
