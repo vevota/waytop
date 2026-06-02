@@ -461,7 +461,7 @@ void overlay_toggle_locked(struct overlay *ov) {
     fprintf(stderr, "toggle: locked=%d\n", ov->locked);
     set_input_regions(ov);
     wl_surface_commit(ov->surface);
-    wl_display_flush(ov->display);
+    wl_display_roundtrip(ov->display);
 }
 
 int overlay_is_locked(struct overlay *ov) {

@@ -107,6 +107,9 @@ static void on_pointer(void *data, int x, int y, int type) {
     struct app *app = data;
     struct player *pl = app->pl;
 
+    if (overlay_is_locked(app->ov))
+        return;
+
     if (type == 1) {
         int seek_origin;
         if (ui_hit_play(app->ov, x, y)) {
