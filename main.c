@@ -110,6 +110,12 @@ static void on_pointer(void *data, int x, int y, int type) {
     if (overlay_is_locked(app->ov))
         return;
 
+    if (type == 0) {
+        uint64_t val = 1;
+        write(app->wakeup_fd, &val, sizeof(val));
+        return;
+    }
+
     if (type == 1) {
         int seek_origin;
         if (ui_hit_play(app->ov, x, y)) {
@@ -117,11 +123,11 @@ static void on_pointer(void *data, int x, int y, int type) {
             player_cmd(pl, args);
             return;
         } else if (ui_hit_rewind(app->ov, x, y)) {
-            const char *args[] = {"seek", "-30", NULL};
+            const char *args[] = {"seek", "30", NULL};
             player_cmd(pl, args);
             return;
         } else if (ui_hit_forward(app->ov, x, y)) {
-            const char *args[] = {"seek", "30", NULL};
+            const char *args[] = {"seek", "-30", NULL};
             player_cmd(pl, args);
             return;
         } else if (ui_hit_seek(app->ov, x, y, &seek_origin)) {
@@ -327,7 +333,7 @@ int main(int argc, char **argv) {
 
         int mpv_ready = player_update(app.pl);
 
-        if (app.frame_done) {
+        if (mpv_ready || (!overlay_is_locked(app.ov) && app.frame_done)) {
             overlay_make_current(app.ov);
             if (mpv_ready) player_render(app.pl);
             ui_draw(app.ov, app.pl, !overlay_is_locked(app.ov));
