@@ -122,7 +122,6 @@ void ui_draw(struct overlay *ov, struct player *pl, int unlocked) {
     if (pos < 0) pos = 0;
 
     float c = 0.8f;
-    fprintf(stderr, "ui: pause=%d\n", pause_flag);
 
     if (pause_flag) {
         draw_rect(btn_left + 6,  btn_top + 4,  5, UI_BTN_S - 8, c, c, c, 1);
