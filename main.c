@@ -333,7 +333,7 @@ int main(int argc, char **argv) {
 
         int mpv_ready = player_update(app.pl);
 
-        if (mpv_ready || (!overlay_is_locked(app.ov) && app.frame_done)) {
+        if (mpv_ready || (!overlay_is_locked(app.ov))) {
             overlay_make_current(app.ov);
             if (mpv_ready) player_render(app.pl);
             ui_draw(app.ov, app.pl, !overlay_is_locked(app.ov));
