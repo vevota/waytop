@@ -108,6 +108,8 @@ void ui_draw(struct overlay *ov, struct player *pl, int unlocked) {
 
     ui_init();
 
+    glUseProgram(prog);
+
     glViewport(0, 0, w, h);
 
     glDisable(GL_DEPTH_TEST);
@@ -117,8 +119,6 @@ void ui_draw(struct overlay *ov, struct player *pl, int unlocked) {
     float sx = 2.0f / w;
     float sy = -2.0f / h;
     glUniform2f(u_scale, sx, sy);
-
-    draw_rect(0, 0, w, h, 0, 1, 0, 0.3f);
 
     int bar_y = h - UI_BAR_H;
     int btn_top = bar_y + (UI_BAR_H - UI_BTN_S) / 2;
