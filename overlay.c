@@ -1,4 +1,5 @@
 #define _POSIX_C_SOURCE 199309L
+#define SNAP_THRESH 20
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -37,8 +38,44 @@ static void registry_global(void *data, struct wl_registry *registry,
     } else if (strcmp(interface, "wl_seat") == 0) {
         ov->seat = wl_registry_bind(registry, name,
                                     &wl_seat_interface, 1);
+    } else if (strcmp(interface, "wl_output") == 0) {
+        ov->output = wl_registry_bind(registry, name,
+                                      &wl_output_interface, 1);
     }
 }
+
+static void output_geometry(void *data, struct wl_output *output,
+                             int32_t x, int32_t y, int32_t wmm, int32_t hmm,
+                             int32_t sub, const char *make, const char *model,
+                             int32_t transform) {
+    (void)data; (void)output; (void)x; (void)y; (void)wmm; (void)hmm;
+    (void)sub; (void)make; (void)model; (void)transform;
+}
+
+static void output_mode(void *data, struct wl_output *output,
+                         uint32_t flags, int32_t w, int32_t h,
+                         int32_t refresh) {
+    (void)output; (void)flags; (void)refresh;
+    struct overlay *ov = data;
+    ov->output_w = w;
+    ov->output_h = h;
+}
+
+static void output_done(void *data, struct wl_output *output) {
+    (void)data; (void)output;
+}
+
+static void output_scale(void *data, struct wl_output *output,
+                          int32_t factor) {
+    (void)data; (void)output; (void)factor;
+}
+
+static const struct wl_output_listener output_listener = {
+    .geometry = output_geometry,
+    .mode = output_mode,
+    .done = output_done,
+    .scale = output_scale,
+};
 
 static void registry_global_remove(void *data, struct wl_registry *registry,
                                    uint32_t name) {
@@ -109,9 +146,17 @@ static void pointer_motion(void *data, struct wl_pointer *ptr,
     int ny = wl_fixed_to_int(sy);
 
     if (ov->drag_active) {
-        overlay_set_position(ov,
-            ov->drag_grab_px + (nx - ov->drag_grab_rx),
-            ov->drag_grab_py + (ny - ov->drag_grab_ry));
+        int dx = ov->drag_grab_px + (nx - ov->drag_grab_rx);
+        int dy = ov->drag_grab_py + (ny - ov->drag_grab_ry);
+        if (ov->output_w > 0 && ov->output_h > 0) {
+            if (dx < SNAP_THRESH) dx = 0;
+            else if (dx + ov->width > ov->output_w - SNAP_THRESH)
+                dx = ov->output_w - ov->width;
+            if (dy < SNAP_THRESH) dy = 0;
+            else if (dy + ov->height > ov->output_h - SNAP_THRESH)
+                dy = ov->output_h - ov->height;
+        }
+        overlay_set_position(ov, dx, dy);
     } else if (ov->resize_active) {
         int dw = nx - ov->resize_grab_rx;
         int dh = ny - ov->resize_grab_ry;
@@ -273,6 +318,10 @@ struct overlay *overlay_create(const char *socket, int width, int height,
 
     if (ov->seat)
         wl_seat_add_listener(ov->seat, &seat_listener, ov);
+    if (ov->output)
+        wl_output_add_listener(ov->output, &output_listener, ov);
+
+    wl_display_roundtrip(ov->display);
 
     ov->surface = wl_compositor_create_surface(ov->compositor);
 
@@ -399,6 +448,8 @@ void overlay_destroy(struct overlay *ov) {
         wl_pointer_destroy(ov->pointer);
     if (ov->seat)
         wl_seat_destroy(ov->seat);
+    if (ov->output)
+        wl_output_destroy(ov->output);
     if (ov->layer_surface)
         zwlr_layer_surface_v1_destroy(ov->layer_surface);
     if (ov->layer_shell)

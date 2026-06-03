@@ -27,6 +27,8 @@ struct overlay {
 
     struct wl_seat *seat;
     struct wl_pointer *pointer;
+    struct wl_output *output;
+    int output_w, output_h;
 
     int pos_x, pos_y;
     int width;
