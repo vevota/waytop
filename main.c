@@ -127,6 +127,14 @@ static void on_pointer(void *data, int x, int y, int type) {
             const char *args[] = {"seek", "30", NULL};
             player_cmd(pl, args);
             return;
+        } else if (ui_hit_prev(app->ov, x, y)) {
+            const char *args[] = {"playlist-prev", NULL};
+            player_cmd(pl, args);
+            return;
+        } else if (ui_hit_next(app->ov, x, y)) {
+            const char *args[] = {"playlist-next", NULL};
+            player_cmd(pl, args);
+            return;
         } else if (ui_hit_forward(app->ov, x, y)) {
             const char *args[] = {"seek", "-30", NULL};
             player_cmd(pl, args);

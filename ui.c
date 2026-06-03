@@ -137,19 +137,34 @@ void ui_draw(struct overlay *ov, struct player *pl, int unlocked) {
 
     float c = 0.8f;
 
-    int btn_left = UI_MARGIN;
-
+    int play_x = UI_MARGIN;
     if (pause_flag) {
-        float cx = btn_left + 8;
+        float cx = play_x + 8;
         float cy = btn_top + UI_BTN_S / 2.0f;
         float half = UI_BTN_S / 3.0f;
         draw_tri(cx, cy - half, cx, cy + half, cx + half * 1.2f, cy, c, c, c, 1);
     } else {
-        draw_rect(btn_left + 6,  btn_top + 4,  5, UI_BTN_S - 8, c, c, c, 1);
-        draw_rect(btn_left + 16, btn_top + 4,  5, UI_BTN_S - 8, c, c, c, 1);
+        draw_rect(play_x + 6,  btn_top + 4,  5, UI_BTN_S - 8, c, c, c, 1);
+        draw_rect(play_x + 16, btn_top + 4,  5, UI_BTN_S - 8, c, c, c, 1);
     }
 
-    int seek_l = btn_left + UI_BTN_S + UI_MARGIN;
+    int btn_y = bar_y + (UI_BAR_H - UI_SEEK_S) / 2;
+
+    int prev_x = play_x + UI_BTN_S + UI_MARGIN;
+    draw_rect(prev_x, btn_y, UI_SEEK_S, UI_SEEK_S, 0.2f, 0.2f, 0.2f, 1);
+    draw_rect(prev_x + 4, btn_y + 5, 5, UI_SEEK_S - 10, c, c, c, 1);
+    draw_tri(prev_x + 22, btn_y + UI_SEEK_S/2,
+             prev_x + 10, btn_y + 5,
+             prev_x + 10, btn_y + UI_SEEK_S - 5, c, c, c, 1);
+
+    int next_x = prev_x + UI_SEEK_S + UI_MARGIN;
+    draw_rect(next_x, btn_y, UI_SEEK_S, UI_SEEK_S, 0.2f, 0.2f, 0.2f, 1);
+    draw_tri(next_x + 8, btn_y + UI_SEEK_S/2,
+             next_x + 20, btn_y + 5,
+             next_x + 20, btn_y + UI_SEEK_S - 5, c, c, c, 1);
+    draw_rect(next_x + 21, btn_y + 5, 5, UI_SEEK_S - 10, c, c, c, 1);
+
+    int seek_l = next_x + UI_SEEK_S + UI_MARGIN;
     int seek_r = w - UI_MARGIN - (UI_SEEK_S + UI_MARGIN) * 2;
     int seek_y = bar_y + (UI_BAR_H - UI_SEEK_H) / 2;
     int seek_w = seek_r - seek_l;
@@ -164,8 +179,6 @@ void ui_draw(struct overlay *ov, struct player *pl, int unlocked) {
         int dot_r = UI_SEEK_H + 2;
         draw_rect(dot_x - dot_r/2, seek_y - 1, dot_r, UI_SEEK_H + 2, c, c, c, 1);
     }
-
-    int btn_y = bar_y + (UI_BAR_H - UI_SEEK_S) / 2;
 
     int rw_x = seek_r + UI_MARGIN;
     draw_rect(rw_x, btn_y, UI_SEEK_S, UI_SEEK_S, 0.2f, 0.2f, 0.2f, 1);
@@ -193,10 +206,26 @@ int ui_hit_play(struct overlay *ov, int x, int y) {
     return x >= btn_left && x < btn_left + UI_BTN_S + UI_MARGIN;
 }
 
+#define PLAY_RIGHT (UI_MARGIN + UI_BTN_S + UI_MARGIN)
+
+int ui_hit_prev(struct overlay *ov, int x, int y) {
+    int bar_y = ov->height - UI_BAR_H;
+    if (y < bar_y || y >= ov->height) return 0;
+    int px = PLAY_RIGHT;
+    return x >= px && x < px + UI_SEEK_S + UI_MARGIN;
+}
+
+int ui_hit_next(struct overlay *ov, int x, int y) {
+    int bar_y = ov->height - UI_BAR_H;
+    if (y < bar_y || y >= ov->height) return 0;
+    int px = PLAY_RIGHT + UI_SEEK_S + UI_MARGIN;
+    return x >= px && x < px + UI_SEEK_S + UI_MARGIN;
+}
+
 int ui_hit_seek(struct overlay *ov, int x, int y, int *out_pos) {
     int bar_y = ov->height - UI_BAR_H;
     if (y < bar_y || y >= ov->height) return 0;
-    int seek_l = UI_MARGIN + UI_BTN_S + UI_MARGIN;
+    int seek_l = PLAY_RIGHT + UI_SEEK_S + UI_MARGIN + UI_SEEK_S + UI_MARGIN;
     int seek_r = ov->width - UI_MARGIN - (UI_SEEK_S + UI_MARGIN) * 2;
     if (x < seek_l || x >= seek_r) return 0;
     *out_pos = seek_l;

@@ -16,5 +16,7 @@ int ui_hit_play(struct overlay *ov, int x, int y);
 int ui_hit_seek(struct overlay *ov, int x, int y, int *out_pos);
 int ui_hit_rewind(struct overlay *ov, int x, int y);
 int ui_hit_forward(struct overlay *ov, int x, int y);
+int ui_hit_prev(struct overlay *ov, int x, int y);
+int ui_hit_next(struct overlay *ov, int x, int y);
 
 #endif
