@@ -135,6 +135,10 @@ static void on_pointer(void *data, int x, int y, int type) {
             const char *args[] = {"playlist-next", NULL};
             player_cmd(pl, args);
             return;
+        } else if (ui_hit_subs(app->ov, x, y)) {
+            const char *args[] = {"cycle", "sub-visibility", NULL};
+            player_cmd(pl, args);
+            return;
         } else if (ui_hit_forward(app->ov, x, y)) {
             const char *args[] = {"seek", "-30", NULL};
             player_cmd(pl, args);

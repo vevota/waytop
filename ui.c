@@ -164,7 +164,18 @@ void ui_draw(struct overlay *ov, struct player *pl, int unlocked) {
              next_x + 20, btn_y + UI_SEEK_S - 5, c, c, c, 1);
     draw_rect(next_x + 21, btn_y + 5, 5, UI_SEEK_S - 10, c, c, c, 1);
 
-    int seek_l = next_x + UI_SEEK_S + UI_MARGIN;
+    int subs_on = 0;
+    mpv_get_property(pl->mpv, "sub-visibility", MPV_FORMAT_FLAG, &subs_on);
+    int subs_x = next_x + UI_SEEK_S + UI_MARGIN;
+    draw_rect(subs_x, btn_y, UI_SEEK_S, UI_SEEK_S, 0.2f, 0.2f, 0.2f, 1);
+    draw_rect(subs_x + 4, btn_y + UI_SEEK_S-12, 22, 4, c*0.5f, c*0.5f, c*0.5f, 1);
+    draw_rect(subs_x + 7, btn_y + UI_SEEK_S-7,  16, 4, c*0.5f, c*0.5f, c*0.5f, 1);
+    if (subs_on) {
+        draw_rect(subs_x + 4, btn_y + UI_SEEK_S-12, 22, 4, 0, 0.8f, 0, 1);
+        draw_rect(subs_x + 7, btn_y + UI_SEEK_S-7,  16, 4, 0, 0.8f, 0, 1);
+    }
+
+    int seek_l = subs_x + UI_SEEK_S + UI_MARGIN;
     int seek_r = w - UI_MARGIN - (UI_SEEK_S + UI_MARGIN) * 2;
     int seek_y = bar_y + (UI_BAR_H - UI_SEEK_H) / 2;
     int seek_w = seek_r - seek_l;
@@ -206,26 +217,33 @@ int ui_hit_play(struct overlay *ov, int x, int y) {
     return x >= btn_left && x < btn_left + UI_BTN_S + UI_MARGIN;
 }
 
-#define PLAY_RIGHT (UI_MARGIN + UI_BTN_S + UI_MARGIN)
+#define BTN_ROW_L (UI_MARGIN + UI_BTN_S + UI_MARGIN)
 
 int ui_hit_prev(struct overlay *ov, int x, int y) {
     int bar_y = ov->height - UI_BAR_H;
     if (y < bar_y || y >= ov->height) return 0;
-    int px = PLAY_RIGHT;
-    return x >= px && x < px + UI_SEEK_S + UI_MARGIN;
+    int bx = BTN_ROW_L;
+    return x >= bx && x < bx + UI_SEEK_S + UI_MARGIN;
 }
 
 int ui_hit_next(struct overlay *ov, int x, int y) {
     int bar_y = ov->height - UI_BAR_H;
     if (y < bar_y || y >= ov->height) return 0;
-    int px = PLAY_RIGHT + UI_SEEK_S + UI_MARGIN;
-    return x >= px && x < px + UI_SEEK_S + UI_MARGIN;
+    int bx = BTN_ROW_L + (UI_SEEK_S + UI_MARGIN);
+    return x >= bx && x < bx + UI_SEEK_S + UI_MARGIN;
+}
+
+int ui_hit_subs(struct overlay *ov, int x, int y) {
+    int bar_y = ov->height - UI_BAR_H;
+    if (y < bar_y || y >= ov->height) return 0;
+    int bx = BTN_ROW_L + (UI_SEEK_S + UI_MARGIN) * 2;
+    return x >= bx && x < bx + UI_SEEK_S + UI_MARGIN;
 }
 
 int ui_hit_seek(struct overlay *ov, int x, int y, int *out_pos) {
     int bar_y = ov->height - UI_BAR_H;
     if (y < bar_y || y >= ov->height) return 0;
-    int seek_l = PLAY_RIGHT + UI_SEEK_S + UI_MARGIN + UI_SEEK_S + UI_MARGIN;
+    int seek_l = BTN_ROW_L + (UI_SEEK_S + UI_MARGIN) * 3;
     int seek_r = ov->width - UI_MARGIN - (UI_SEEK_S + UI_MARGIN) * 2;
     if (x < seek_l || x >= seek_r) return 0;
     *out_pos = seek_l;
