@@ -38,6 +38,7 @@ struct player *player_create(const char *url, int width, int height) {
     mpv_set_option_string(pl->mpv, "load-scripts", "yes");
     mpv_set_option_string(pl->mpv, "osc-visibility", "always");
     mpv_set_option_string(pl->mpv, "terminal", "no");
+    mpv_set_option_string(pl->mpv, "volume", "50");
 
     if (mpv_initialize(pl->mpv) < 0) {
         fprintf(stderr, "failed to initialize mpv\n");
