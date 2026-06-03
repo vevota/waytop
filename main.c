@@ -136,7 +136,7 @@ static void on_pointer(void *data, int x, int y, int type) {
             player_cmd(pl, args);
             return;
         } else if (ui_hit_subs(app->ov, x, y)) {
-            const char *args[] = {"cycle", "sub-visibility", NULL};
+            const char *args[] = {"cycle", "sub", NULL};
             player_cmd(pl, args);
             return;
         } else if (ui_hit_forward(app->ov, x, y)) {
