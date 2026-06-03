@@ -58,6 +58,8 @@ struct overlay {
 
     uint64_t hover_ns;
     int locked;
+
+    float aspect;
 };
 
 enum anchor_pos {
@@ -76,6 +78,7 @@ void overlay_make_current(struct overlay *ov);
 void overlay_swap_buffers(struct overlay *ov);
 void overlay_set_position(struct overlay *ov, int x, int y);
 void overlay_resize(struct overlay *ov, int width, int height);
+void overlay_set_aspect(struct overlay *ov, float ar);
 void overlay_set_scroll_fn(struct overlay *ov, void (*fn)(void *, int), void *data);
 void overlay_set_resize_fn(struct overlay *ov, void (*fn)(void *, int, int), void *data);
 void overlay_set_pointer_fn(struct overlay *ov, void (*fn)(void *, int, int, int), void *data);

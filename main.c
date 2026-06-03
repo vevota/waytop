@@ -342,6 +342,24 @@ int main(int argc, char **argv) {
         while (player_poll_event(app.pl, &ev)) {
             if (ev->event_id == MPV_EVENT_SHUTDOWN)
                 app.running = 0;
+            else if (ev->event_id == MPV_EVENT_FILE_LOADED) {
+                int vw = 0, vh = 0;
+                mpv_node node;
+                if (mpv_get_property(app.pl->mpv, "video-params",
+                                     MPV_FORMAT_NODE, &node) >= 0) {
+                    if (node.format == MPV_FORMAT_NODE_MAP) {
+                        for (int i = 0; i < node.u.list->num; i++) {
+                            if (strcmp(node.u.list->keys[i], "w") == 0)
+                                vw = node.u.list->values[i].u.int64;
+                            if (strcmp(node.u.list->keys[i], "h") == 0)
+                                vh = node.u.list->values[i].u.int64;
+                        }
+                    }
+                    mpv_free_node_contents(&node);
+                }
+                if (vw > 0 && vh > 0)
+                    overlay_set_aspect(app.ov, (float)vw / vh);
+            }
         }
 
         int mpv_ready = player_update(app.pl);

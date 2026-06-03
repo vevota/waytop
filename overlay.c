@@ -117,6 +117,15 @@ static void pointer_motion(void *data, struct wl_pointer *ptr,
         int dh = ny - ov->resize_grab_ry;
         int nw = CLAMP(ov->resize_grab_bw + dw, MIN_WIDTH, 9999);
         int nh = CLAMP(ov->resize_grab_bh + dh, MIN_HEIGHT, 9999);
+        if (ov->aspect > 0 && nw > 0 && nh > 0) {
+            float ar = ov->aspect;
+            if ((float)nw / nh > ar)
+                nh = (int)(nw / ar + 0.5f);
+            else
+                nw = (int)(nh * ar + 0.5f);
+            nw = CLAMP(nw, MIN_WIDTH, 9999);
+            nh = CLAMP(nh, MIN_HEIGHT, 9999);
+        }
         overlay_resize(ov, nw, nh);
     } else if (ov->press_pending) {
         int dx = nx - ov->press_x;
@@ -240,6 +249,7 @@ struct overlay *overlay_create(const char *socket, int width, int height,
     ov->locked = 1;
     ov->width = width;
     ov->height = height;
+    ov->aspect = (float)width / height;
     struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);
     ov->hover_ns = (uint64_t)ts.tv_sec * 1000000000ULL + (uint64_t)ts.tv_nsec;
@@ -446,6 +456,10 @@ void overlay_resize(struct overlay *ov, int width, int height) {
     wl_display_flush(ov->display);
     if (ov->resize_fn)
         ov->resize_fn(ov->resize_data, width, height);
+}
+
+void overlay_set_aspect(struct overlay *ov, float ar) {
+    ov->aspect = ar;
 }
 
 void overlay_set_scroll_fn(struct overlay *ov, void (*fn)(void *, int), void *data) {
