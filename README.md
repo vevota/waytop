@@ -71,6 +71,29 @@ make
 ./overlay-ctl quit
 ```
 
+### Jellyfin browsing
+
+`overlay-ctl jellyfin` opens a rofi menu to browse your Jellyfin library, pick a movie, series, season, or episode, and play it as an overlay.
+
+First create a config file:
+
+```
+~/.config/waytop/jellyfin.conf
+```
+
+```ini
+server=https://your-jellyfin.example.net
+api_key=YOUR_API_KEY
+```
+
+Get an API key from Jellyfin Dashboard, API Keys. Then:
+
+```bash
+./overlay-ctl jellyfin
+```
+
+Browse library, pick a movie (plays directly) or a series (pick a season, an episode, or play the entire series). Requires `rofi`, `curl`, and `jq`.
+
 ## How it works
 
 | Layer | What renders |

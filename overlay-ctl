@@ -22,6 +22,9 @@ case "${1:-}" in
     toggle|quit)
         exec "$wl_overlay" -c "$1"
         ;;
+    jellyfin)
+        exec "$(dirname "$0")/waytop-jellyfin"
+        ;;
 esac
 
 if [ -z "${1:-}" ]; then

@@ -1,0 +1,90 @@
+#!/usr/bin/env bash
+
+CONF="$HOME/.config/waytop/jellyfin.conf"
+WAYTOP="$(dirname "$0")/waytop"
+
+die() { echo "error: $*" >&2; exit 1; }
+
+pick() {
+    rofi -dmenu -i -p "$1" 2>/dev/null
+}
+
+# --- load config ---
+if [ ! -f "$CONF" ]; then
+    echo "config not found: $CONF" >&2
+    echo "create it with:" >&2
+    echo "  server=https://your-jellyfin.example.net" >&2
+    echo "  api_key=YOUR_KEY" >&2
+    exit 1
+fi
+
+server=$(grep -E '^server=' "$CONF" | cut -d= -f2-)
+api_key=$(grep -E '^api_key=' "$CONF" | cut -d= -f2-)
+[ -z "$server" ] && die "no server in $CONF"
+[ -z "$api_key" ] && die "no api_key in $CONF"
+
+api() {
+    curl -sf -H "X-Emby-Token: $api_key" "$server$1" 2>/dev/null
+}
+
+# --- find a user id ---
+user_id=$(api "/Users?api_key=$api_key" | jq -r '.[0].Id' 2>/dev/null)
+[ -z "$user_id" ] && die "could not find a Jellyfin user (check server/api_key)"
+
+# --- pick a library ---
+libs=$(api "/Users/$user_id/Views?api_key=$api_key" \
+    | jq -r '.[] | select(.CollectionType != null) | "\(.Id)|\(.Name)|\(.CollectionType)"' 2>/dev/null)
+[ -z "$libs" ] && die "no libraries found"
+
+lib=$(printf '%s\n' "$libs" | pick "Library")
+[ -z "$lib" ] && exit 1
+lib_id=$(printf '%s' "$lib" | cut -d'|' -f1)
+lib_name=$(printf '%s' "$lib" | cut -d'|' -f2)
+lib_type=$(printf '%s' "$lib" | cut -d'|' -f3)
+
+# --- list items in the library ---
+# Movies: direct items. TV: series.
+items=$(api "/Users/$user_id/Items?ParentId=$lib_id&api_key=$api_key&Recursive=true" \
+    | jq -r '.[] | select(.Type == "Movie" or .Type == "Series" or .Type == "BoxSet") | "\(.Id)|\(.Name)|\(.Type)"' 2>/dev/null)
+[ -z "$items" ] && die "no items in $lib_name"
+
+item=$(printf '%s\n' "$items" | pick "$lib_name")
+[ -z "$item" ] && exit 1
+item_id=$(printf '%s' "$item" | cut -d'|' -f1)
+item_name=$(printf '%s' "$item" | cut -d'|' -f2)
+item_type=$(printf '%s' "$item" | cut -d'|' -f3)
+
+# --- if it's a series, drill into seasons then episodes ---
+if [ "$item_type" = "Series" ]; then
+    seasons=$(api "/Users/$user_id/Items?ParentId=$item_id&api_key=$api_key&Recursive=true" \
+        | jq -r '.[] | select(.Type == "Season") | "\(.Id)|\(.Name)"' 2>/dev/null)
+    # offer "play whole series" plus each season
+    menu="play-all|Play entire series"
+    [ -n "$seasons" ] && menu=$(printf '%s\n%s\n' "$menu" "$seasons")
+
+    season=$(printf '%s\n' "$menu" | pick "$item_name")
+    [ -z "$season" ] && exit 1
+    season_id=$(printf '%s' "$season" | cut -d'|' -f1)
+
+    if [ "$season_id" = "play-all" ]; then
+        episodes=$(api "/Shows/$item_id/Episodes?UserId=$user_id&api_key=$api_key&Fields=Path" \
+            | jq -r '.[] | "\(.Id)"' 2>/dev/null)
+    else
+        episodes=$(api "/Shows/$item_id/Episodes?UserId=$user_id&api_key=$api_key&SeasonId=$season_id&Fields=Path" \
+            | jq -r '.[] | "\(.Id)|\(.IndexNumber // 0)|\(.Name)"' 2>/dev/null)
+        ep=$(printf '%s\n' "$episodes" | pick "Episode")
+        [ -z "$ep" ] && exit 1
+        episodes=$(printf '%s' "$ep" | cut -d'|' -f1)
+    fi
+else
+    episodes="$item_id"
+fi
+
+# --- build playlist from the selected episode ids ---
+m3u=$(mktemp --suffix=.m3u)
+for id in $episodes; do
+    echo "$server/Videos/$id/stream?Static=true&api_key=$api_key" >> "$m3u"
+done
+
+# --- launch waytop ---
+exec "$WAYTOP" "$m3u"
